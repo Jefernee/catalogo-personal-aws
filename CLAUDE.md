@@ -14,16 +14,20 @@ Repositorio: <https://github.com/Jefernee/catalogo-personal-aws> (público)
 ## Lo que siempre se busca
 
 ```
-API        https://dirb0jl8r2.execute-api.us-east-1.amazonaws.com
 Web        https://jefernee.github.io/catalogo-personal-aws/
 Región     us-east-1 (Norte de Virginia)
-Cuenta     610156626281
 ```
 
-Probar la API sin entrar a AWS:
+**La URL de la API y el enlace ya configurado están en `DATOS-PRIVADOS.md`**, que no se
+sube a git: este repositorio es público y la API no tiene autenticación, así que
+publicarla equivaldría a dejar el catálogo y el diario abiertos a cualquiera.
+
+Ese archivo también está en `app/.env.local`, y en el gestor de contraseñas.
+
+Probar la API sin entrar a AWS (con la URL del archivo local):
 
 ```bash
-curl https://dirb0jl8r2.execute-api.us-east-1.amazonaws.com/catalogo
+curl <URL_DE_LA_API>/catalogo
 ```
 
 Si responde con un JSON, todo está en pie. La consola solo hace falta para cambiar
@@ -37,7 +41,7 @@ Todo en **us-east-1**, cuenta `610156626281`, creada con usuario root.
 
 | Recurso | Nombre / valor |
 |---|---|
-| API Gateway (HTTP API) | `catalogo-personal-api` · `https://dirb0jl8r2.execute-api.us-east-1.amazonaws.com` |
+| API Gateway (HTTP API) | `catalogo-personal-api` · URL en `DATOS-PRIVADOS.md` |
 | Etapa | `$default`, con implementación automática |
 | Lambda | `catalogo-personal-api` · Python 3.13 · timeout 30 s |
 | Rol de ejecución | `catalogo-personal-lambda-role` + política insertada `catalogo-personal-permisos` |
@@ -84,10 +88,10 @@ PLAN-proyecto-final-modulo3.md   el plan contra la rúbrica
 ## Comandos
 
 ```bash
-python -m pytest tests -q                                   # 51 pruebas locales
-python pruebas_e2e.py https://dirb0jl8r2.execute-api.us-east-1.amazonaws.com
-python cargar_datos.py https://dirb0jl8r2.execute-api.us-east-1.amazonaws.com
-cd app && npm run dev                                       # app en localhost:5173
+python -m pytest tests -q            # 51 pruebas locales
+python pruebas_e2e.py <URL_API>      # 16 verificaciones contra la API real
+python cargar_datos.py <URL_API>     # carga los 10 registros de ejemplo
+cd app && npm run dev                # app en localhost:5173
 ```
 
 La app toma la URL de la API de `app/.env.local`, que **no se sube a git** para que el
@@ -150,7 +154,7 @@ workflow de `.github/workflows/pages.yml` y actualiza GitHub Pages.
 | Cambiar colores o tipografía | los tokens al inicio de `app/src/styles.css`. Todo el resto los hereda, incluido el tema oscuro. |
 | Cambiar los permisos de la Lambda | `iam-policy.json` aquí, y pegarlo en IAM → Roles → `catalogo-personal-lambda-role` → política `catalogo-personal-permisos`. |
 | Permitir otro origen en el navegador | API Gateway → CORS. Recordar: el valor hay que escribirlo **y darle a Agregar**, si no, no se guarda. |
-| Cambiar la URL de la API en la app | `app/.env.local` (local), o el engrane dentro de la app (por navegador). |
+| Cambiar la URL de la API en la app | `app/.env.local` (local), el engrane dentro de la app, o abrir la app con `#api=<url>` al final del enlace. |
 
 **Antes de dar por bueno un cambio:**
 

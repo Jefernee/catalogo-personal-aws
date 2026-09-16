@@ -45,13 +45,10 @@ También funciona con doble clic al archivo, pero servirlo así evita problemas 
 
 ## 3 · Conectarla
 
-Pega la URL de tu API en el campo de arriba y dale **Conectar**:
+Pega la URL de tu API en el campo de arriba y dale **Conectar**. Queda guardada en el
+navegador, no hay que volver a escribirla.
 
-```
-https://dirb0jl8r2.execute-api.us-east-1.amazonaws.com
-```
-
-Queda guardada en el navegador, no hay que volver a escribirla.
+La URL está en `DATOS-PRIVADOS.md`, que no se sube a git.
 
 ---
 

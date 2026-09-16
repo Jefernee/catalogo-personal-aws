@@ -41,6 +41,21 @@ VITE_API_URL=https://xxxx.execute-api.us-east-1.amazonaws.com
 
 Sin ese archivo, la app la pide una vez y la guarda en el navegador. Si el archivo existe, entra directa.
 
+## Configurar la app en otro dispositivo
+
+Abrirla con la URL de la API al final del enlace la deja configurada de una vez:
+
+```
+https://jefernee.github.io/catalogo-personal-aws/#api=<URL_DE_LA_API>
+```
+
+La app guarda la URL en ese dispositivo y la borra de la barra de direcciones. Ese
+enlace es el que conviene guardar en el gestor de contraseñas: sirve para el celular,
+para otra computadora o para el día de la demo.
+
+Quien abra la página sin esa parte final solo ve la pantalla de conexión — por eso la
+URL no viaja dentro del build publicado.
+
 ## Compilar
 
 ```bash
