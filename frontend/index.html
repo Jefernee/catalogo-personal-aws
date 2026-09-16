@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mi catálogo</title>
+<style>
+  :root {
+    color-scheme: light;
+    --fondo: #f6f6f4;
+    --tarjeta: #ffffff;
+    --borde: #e3e2de;
+    --texto: #1c1c1a;
+    --suave: #6c6b66;
+    --acento: #2563eb;
+    --acento-suave: #eff4ff;
+    --peligro: #b42318;
+    --ok: #067647;
+    --radio: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --fondo: #17171a;
+      --tarjeta: #212125;
+      --borde: #34343a;
+      --texto: #f2f2f0;
+      --suave: #a1a1a0;
+      --acento: #7aa2ff;
+      --acento-suave: #23304d;
+      --peligro: #ff8f85;
+      --ok: #6ee7a8;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 24px 16px 64px;
+    background: var(--fondo);
+    color: var(--texto);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  }
+  .contenedor { max-width: 980px; margin: 0 auto; }
+
+  header { display: flex; flex-wrap: wrap; gap: 12px; align-items: baseline; justify-content: space-between; margin-bottom: 4px; }
+  h1 { font-size: 24px; margin: 0; letter-spacing: -0.02em; }
+  .sub { color: var(--suave); font-size: 13px; margin: 0 0 20px; }
+
+  .barra { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 16px; }
+  input, select, textarea, button {
+    font: inherit;
+    color: var(--texto);
+    background: var(--tarjeta);
+    border: 1px solid var(--borde);
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+  textarea { resize: vertical; min-height: 68px; width: 100%; }
+  button { cursor: pointer; }
+  button:hover { border-color: var(--acento); }
+  .primario { background: var(--acento); border-color: var(--acento); color: #fff; font-weight: 600; }
+  .primario:hover { filter: brightness(1.08); }
+  .fantasma { background: transparent; }
+  .chip {
+    background: transparent; border-radius: 999px; padding: 5px 12px; font-size: 13px; color: var(--suave);
+  }
+  .chip[aria-pressed="true"] { background: var(--acento-suave); border-color: var(--acento); color: var(--acento); font-weight: 600; }
+
+  .panel { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: var(--radio); padding: 16px; margin-bottom: 20px; }
+  .panel h2 { font-size: 15px; margin: 0 0 12px; }
+  .campos { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; }
+
+  .lista { display: grid; gap: 10px; }
+  .item { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: var(--radio); padding: 12px 14px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .item .cuerpo { flex: 1 1 260px; min-width: 0; }
+  .titulo { font-weight: 600; }
+  .meta { color: var(--suave); font-size: 13px; margin-top: 2px; }
+  .notas { font-size: 13px; margin-top: 6px; white-space: pre-wrap; }
+  .acciones { display: flex; gap: 6px; flex-wrap: wrap; }
+  .acciones button { padding: 6px 10px; font-size: 13px; }
+  .borrar { color: var(--peligro); }
+  .estrellas { letter-spacing: 2px; }
+
+  .etiqueta { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--borde); color: var(--suave); }
+  .pendiente { color: var(--suave); }
+  .en_curso { color: var(--acento); border-color: var(--acento); }
+  .terminado { color: var(--ok); border-color: var(--ok); }
+  .abandonado { color: var(--peligro); border-color: var(--peligro); }
+
+  .vacio { color: var(--suave); text-align: center; padding: 28px; border: 1px dashed var(--borde); border-radius: var(--radio); }
+  .aviso { padding: 10px 12px; border-radius: 8px; margin-bottom: 14px; font-size: 14px; }
+  .aviso.error { background: #fdecea; color: #7a1d14; }
+  .aviso.exito { background: #e8f6ef; color: #0a5c3a; }
+  @media (prefers-color-scheme: dark) {
+    .aviso.error { background: #3a1c1a; color: #ffb4ab; }
+    .aviso.exito { background: #16332a; color: #8ff0bd; }
+  }
+  .pestanas { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--borde); }
+  .pestanas button { border: 0; background: transparent; border-radius: 0; border-bottom: 2px solid transparent; padding: 8px 14px; color: var(--suave); }
+  .pestanas button[aria-selected="true"] { color: var(--texto); border-bottom-color: var(--acento); font-weight: 600; }
+  footer { color: var(--suave); font-size: 12px; text-align: center; margin-top: 28px; }
+  code { background: var(--acento-suave); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="contenedor">
+
+  <header>
+    <h1>Mi catálogo</h1>
+    <div class="barra" style="margin:0">
+      <input id="url" placeholder="URL de la API" style="width:min(340px,60vw)">
+      <button class="fantasma" id="guardarUrl">Conectar</button>
+    </div>
+  </header>
+  <p class="sub">Libros, series, juegos y lo demás que consumo — más el diario. Todo vive en DynamoDB.</p>
+
+  <div id="aviso"></div>
+
+  <div class="pestanas" role="tablist">
+    <button role="tab" id="tabCatalogo" aria-selected="true">Catálogo</button>
+    <button role="tab" id="tabDiario" aria-selected="false">Diario</button>
+  </div>
+
+  <!-- ================= CATÁLOGO ================= -->
+  <section id="vistaCatalogo">
+    <div class="panel">
+      <h2>Agregar al catálogo</h2>
+      <form id="formItem">
+        <div class="campos">
+          <input name="titulo" placeholder="Título" required>
+          <select name="tipo">
+            <option value="libro">Libro</option>
+            <option value="pelicula">Película</option>
+            <option value="serie">Serie</option>
+            <option value="musica">Música</option>
+            <option value="juego">Juego</option>
+            <option value="restaurante">Restaurante</option>
+          </select>
+          <select name="estado">
+            <option value="pendiente">Pendiente</option>
+            <option value="en_curso">En curso</option>
+            <option value="terminado">Terminado</option>
+            <option value="abandonado">Abandonado</option>
+          </select>
+          <input name="autor" placeholder="Autor / director / lugar">
+          <button class="primario" type="submit">Agregar</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="barra">
+      <span class="meta">Tipo:</span>
+      <span id="filtrosTipo"></span>
+      <span class="meta" style="margin-left:8px">Estado:</span>
+      <span id="filtrosEstado"></span>
+      <span style="flex:1"></span>
+      <button class="fantasma" id="exportar">Exportar a S3</button>
+    </div>
+
+    <div class="lista" id="lista"></div>
+  </section>
+
+  <!-- ================= DIARIO ================= -->
+  <section id="vistaDiario" hidden>
+    <div class="panel">
+      <h2>Nueva entrada</h2>
+      <form id="formDiario">
+        <div class="campos" style="margin-bottom:8px">
+          <input name="titulo" placeholder="Título del día" required>
+          <input name="fecha" type="date">
+        </div>
+        <textarea name="contenido" placeholder="¿Qué pasó hoy?"></textarea>
+        <div style="margin-top:8px"><button class="primario" type="submit">Guardar entrada</button></div>
+      </form>
+    </div>
+    <div class="lista" id="listaDiario"></div>
+  </section>
+
+  <footer>
+    Los datos viven en tu cuenta de AWS. El diario no se incluye en el export salvo que se pida.
+  </footer>
+</div>
+
+<script>
+const TIPOS = ["libro", "pelicula", "serie", "musica", "juego", "restaurante"];
+const ESTADOS = ["pendiente", "en_curso", "terminado", "abandonado"];
+const NOMBRES = {
+  libro: "Libro", pelicula: "Película", serie: "Serie", musica: "Música",
+  juego: "Juego", restaurante: "Restaurante", diario: "Diario",
+  pendiente: "Pendiente", en_curso: "En curso", terminado: "Terminado", abandonado: "Abandonado",
+};
+
+let api = "";
+let filtroTipo = "";
+let filtroEstado = "";
+
+try { api = localStorage.getItem("api") || ""; } catch (e) { api = ""; }
+document.getElementById("url").value = api;
+
+function avisar(texto, clase = "error") {
+  const caja = document.getElementById("aviso");
+  caja.innerHTML = texto ? `<div class="aviso ${clase}">${texto}</div>` : "";
+  if (texto && clase === "exito") setTimeout(() => (caja.innerHTML = ""), 4000);
+}
+
+async function pedir(ruta, opciones = {}) {
+  if (!api) throw new Error("Falta la URL de la API");
+  const r = await fetch(api.replace(/\/$/, "") + ruta, {
+    ...opciones,
+    headers: opciones.body ? { "Content-Type": "application/json" } : {},
+  });
+  const texto = await r.text();
+  const datos = texto ? JSON.parse(texto) : {};
+  if (!r.ok) throw new Error(datos.error || `Error ${r.status}`);
+  return datos;
+}
+
+function estrellas(n) {
+  if (!n) return "";
+  return "★".repeat(Math.round(n)) + "☆".repeat(Math.max(0, 5 - Math.round(n)));
+}
+
+function pintarFiltros() {
+  const hazChips = (contenedor, valores, activo, alElegir) => {
+    contenedor.innerHTML = "";
+    [["", "Todos"], ...valores.map(v => [v, NOMBRES[v]])].forEach(([valor, etiqueta]) => {
+      const b = document.createElement("button");
+      b.className = "chip";
+      b.textContent = etiqueta;
+      b.setAttribute("aria-pressed", String(activo === valor));
+      b.onclick = () => { alElegir(valor); cargar(); };
+      contenedor.appendChild(b);
+    });
+  };
+  hazChips(document.getElementById("filtrosTipo"), TIPOS, filtroTipo, v => (filtroTipo = v));
+  hazChips(document.getElementById("filtrosEstado"), ESTADOS, filtroEstado, v => (filtroEstado = v));
+}
+
+function tarjeta(item) {
+  const div = document.createElement("div");
+  div.className = "item";
+
+  const detalle = [NOMBRES[item.tipo], item.autor || item.director || item.ciudad || item.plataforma,
+                   item.fecha_consumido].filter(Boolean).join(" · ");
+
+  div.innerHTML = `
+    <div class="cuerpo">
+      <div class="titulo">${escapar(item.titulo)}</div>
+      <div class="meta">${escapar(detalle)} <span class="estrellas">${estrellas(item.rating)}</span></div>
+      ${item.notas ? `<div class="notas">${escapar(item.notas)}</div>` : ""}
+    </div>
+    <span class="etiqueta ${item.estado}">${NOMBRES[item.estado] || item.estado}</span>
+  `;
+
+  const acciones = document.createElement("div");
+  acciones.className = "acciones";
+
+  const siguiente = { pendiente: "en_curso", en_curso: "terminado", terminado: "pendiente", abandonado: "en_curso" };
+  const avanzar = document.createElement("button");
+  avanzar.textContent = "→ " + NOMBRES[siguiente[item.estado]];
+  avanzar.onclick = () => actualizar(item.item_id, { estado: siguiente[item.estado] });
+  acciones.appendChild(avanzar);
+
+  if (item.estado === "terminado") {
+    const calificar = document.createElement("select");
+    calificar.innerHTML = `<option value="">Calificar</option>` +
+      [1, 2, 3, 4, 5].map(n => `<option value="${n}" ${Number(item.rating) === n ? "selected" : ""}>${"★".repeat(n)}</option>`).join("");
+    calificar.onchange = () => calificar.value && actualizar(item.item_id, { rating: Number(calificar.value) });
+    acciones.appendChild(calificar);
+  }
+
+  const borrar = document.createElement("button");
+  borrar.className = "borrar";
+  borrar.textContent = "Borrar";
+  borrar.onclick = () => {
+    if (confirm(`¿Borrar "${item.titulo}"?`)) eliminar(item.item_id);
+  };
+  acciones.appendChild(borrar);
+
+  div.appendChild(acciones);
+  return div;
+}
+
+function entradaDiario(item) {
+  const div = document.createElement("div");
+  div.className = "item";
+  div.innerHTML = `
+    <div class="cuerpo">
+      <div class="titulo">${escapar(item.titulo)}</div>
+      <div class="meta">${escapar(item.fecha || (item.creado_en || "").slice(0, 10))}</div>
+      ${item.contenido ? `<div class="notas">${escapar(item.contenido)}</div>` : ""}
+    </div>`;
+  const borrar = document.createElement("button");
+  borrar.className = "borrar";
+  borrar.textContent = "Borrar";
+  borrar.onclick = () => { if (confirm("¿Borrar esta entrada?")) eliminar(item.item_id); };
+  div.appendChild(borrar);
+  return div;
+}
+
+function escapar(texto) {
+  return String(texto ?? "").replace(/[&<>"']/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+async function cargar() {
+  if (!api) { avisar("Pega la URL de tu API arriba y dale a Conectar."); return; }
+  pintarFiltros();
+
+  const enDiario = document.getElementById("tabDiario").getAttribute("aria-selected") === "true";
+  const lista = document.getElementById(enDiario ? "listaDiario" : "lista");
+  lista.innerHTML = `<div class="vacio">Cargando…</div>`;
+
+  try {
+    let ruta = "/catalogo";
+    if (enDiario) {
+      ruta += "?tipo=diario";
+    } else {
+      const partes = [];
+      if (filtroTipo) partes.push("tipo=" + filtroTipo);
+      if (filtroEstado) partes.push("estado=" + filtroEstado);
+      if (partes.length) ruta += "?" + partes.join("&");
+    }
+
+    const datos = await pedir(ruta);
+    let items = datos.items || [];
+    if (!enDiario && !filtroTipo) items = items.filter(i => i.tipo !== "diario");
+
+    items.sort((a, b) => String(b.creado_en || "").localeCompare(String(a.creado_en || "")));
+
+    lista.innerHTML = "";
+    if (!items.length) {
+      lista.innerHTML = `<div class="vacio">Nada por aquí todavía.</div>`;
+      return;
+    }
+    items.forEach(i => lista.appendChild(enDiario ? entradaDiario(i) : tarjeta(i)));
+    avisar("");
+  } catch (e) {
+    lista.innerHTML = "";
+    avisar(mensajeDeError(e));
+  }
+}
+
+function mensajeDeError(e) {
+  if (e instanceof TypeError) {
+    return `No se pudo conectar con la API. Si la URL es correcta, casi siempre es <b>CORS</b>:
+            hay que habilitarlo en API Gateway (ver <code>frontend/LEEME.md</code>).`;
+  }
+  return escapar(e.message);
+}
+
+async function crear(datos) {
+  try {
+    await pedir("/catalogo", { method: "POST", body: JSON.stringify(datos) });
+    avisar("Agregado.", "exito");
+    cargar();
+  } catch (e) { avisar(mensajeDeError(e)); }
+}
+
+async function actualizar(id, cambios) {
+  try {
+    await pedir("/catalogo/" + id, { method: "PUT", body: JSON.stringify(cambios) });
+    cargar();
+  } catch (e) { avisar(mensajeDeError(e)); }
+}
+
+async function eliminar(id) {
+  try {
+    await pedir("/catalogo/" + id, { method: "DELETE" });
+    cargar();
+  } catch (e) { avisar(mensajeDeError(e)); }
+}
+
+document.getElementById("guardarUrl").onclick = () => {
+  api = document.getElementById("url").value.trim();
+  try { localStorage.setItem("api", api); } catch (e) {}
+  cargar();
+};
+
+document.getElementById("formItem").onsubmit = ev => {
+  ev.preventDefault();
+  const f = new FormData(ev.target);
+  const datos = { titulo: f.get("titulo"), tipo: f.get("tipo"), estado: f.get("estado") };
+  const autor = (f.get("autor") || "").trim();
+  if (autor) {
+    const campo = { restaurante: "ciudad", pelicula: "director", serie: "plataforma", juego: "plataforma" }[datos.tipo] || "autor";
+    datos[campo] = autor;
+  }
+  ev.target.reset();
+  crear(datos);
+};
+
+document.getElementById("formDiario").onsubmit = ev => {
+  ev.preventDefault();
+  const f = new FormData(ev.target);
+  const datos = {
+    tipo: "diario",
+    titulo: f.get("titulo"),
+    contenido: f.get("contenido"),
+    fecha: f.get("fecha") || new Date().toISOString().slice(0, 10),
+  };
+  ev.target.reset();
+  crear(datos);
+};
+
+document.getElementById("exportar").onclick = async () => {
+  try {
+    const r = await pedir("/export", { method: "POST" });
+    avisar(`Exportados <b>${r.total_registros}</b> registros a <code>${escapar(r.archivo)}</code> en S3.`, "exito");
+  } catch (e) { avisar(mensajeDeError(e)); }
+};
+
+function cambiarPestana(aDiario) {
+  document.getElementById("tabCatalogo").setAttribute("aria-selected", String(!aDiario));
+  document.getElementById("tabDiario").setAttribute("aria-selected", String(aDiario));
+  document.getElementById("vistaCatalogo").hidden = aDiario;
+  document.getElementById("vistaDiario").hidden = !aDiario;
+  cargar();
+}
+document.getElementById("tabCatalogo").onclick = () => cambiarPestana(false);
+document.getElementById("tabDiario").onclick = () => cambiarPestana(true);
+
+cargar();
+</script>
+</body>
+</html>

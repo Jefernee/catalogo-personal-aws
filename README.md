@@ -95,6 +95,7 @@ La secuencia completa de la demo está en [`demo.sh`](demo.sh).
 | `demo.sh` | La demo en vivo en orden |
 | `tests/` | Suite de pruebas (pytest + moto) |
 | `pruebas_e2e.py` | Pruebas de humo contra la API desplegada |
+| `frontend/` | Pagina HTML para usar el catalogo (extra, no forma parte de lo evaluado) |
 | `DESPLIEGUE.md` | Paso a paso en la consola de AWS |
 | `PLAN-proyecto-final-modulo3.md` | Plan del proyecto contra la rúbrica |
 
@@ -116,6 +117,12 @@ python pruebas_e2e.py https://TU-ID.execute-api.us-east-1.amazonaws.com/dev
 ```
 
 Verifican lo que el emulador no puede ver: que API Gateway esté conectado, que el rol IAM tenga los permisos y que el export llegue al bucket. Crean y eliminan sus propios registros. Solo usan la librería estándar.
+
+---
+
+## Frontend (extra)
+
+El proyecto es una API y no requiere interfaz. Aun así, `frontend/index.html` es una página de un solo archivo, sin librerías, que consume los seis endpoints: listar con filtros, crear, avanzar estado, calificar, borrar y exportar a S3. Necesita CORS habilitado en API Gateway; las instrucciones están en [`frontend/LEEME.md`](frontend/LEEME.md).
 
 ---
 
