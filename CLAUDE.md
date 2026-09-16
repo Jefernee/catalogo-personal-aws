@@ -11,6 +11,26 @@ Repositorio: <https://github.com/Jefernee/catalogo-personal-aws> (público)
 
 ---
 
+## Lo que siempre se busca
+
+```
+API        https://dirb0jl8r2.execute-api.us-east-1.amazonaws.com
+Web        https://jefernee.github.io/catalogo-personal-aws/
+Región     us-east-1 (Norte de Virginia)
+Cuenta     610156626281
+```
+
+Probar la API sin entrar a AWS:
+
+```bash
+curl https://dirb0jl8r2.execute-api.us-east-1.amazonaws.com/catalogo
+```
+
+Si responde con un JSON, todo está en pie. La consola solo hace falta para cambiar
+configuración, no para comprobar que funciona.
+
+---
+
 ## Lo desplegado en AWS
 
 Todo en **us-east-1**, cuenta `610156626281`, creada con usuario root.
