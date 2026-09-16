@@ -24,6 +24,14 @@ export function guardarUrl(url) {
 
 export class ErrorDeRed extends Error {}
 
+/** Error de la API que conserva el codigo HTTP para poder reaccionar a el. */
+export class ErrorApi extends Error {
+  constructor(mensaje, estado) {
+    super(mensaje);
+    this.estado = estado;
+  }
+}
+
 async function pedir(ruta, opciones = {}) {
   const base = leerUrl();
   if (!base) throw new ErrorDeRed("Falta configurar la URL de la API");
@@ -42,7 +50,9 @@ async function pedir(ruta, opciones = {}) {
 
   const texto = await respuesta.text();
   const datos = texto ? JSON.parse(texto) : {};
-  if (!respuesta.ok) throw new Error(datos.error || `Error ${respuesta.status}`);
+  if (!respuesta.ok) {
+    throw new ErrorApi(datos.error || `Error ${respuesta.status}`, respuesta.status);
+  }
   return datos;
 }
 

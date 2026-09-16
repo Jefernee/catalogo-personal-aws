@@ -41,6 +41,17 @@ export default function App() {
     setTimeout(() => setBrindis(null), 3500);
   }, []);
 
+  // Un 404 quiere decir que la pantalla quedo desactualizada: alguien borro
+  // ese item desde otro lado. Se recarga la lista en vez de dejar un error.
+  const manejarError = useCallback(async (e, recargar) => {
+    if (e?.estado === 404) {
+      avisar("Ese ítem ya no existe. Actualicé la lista.");
+      await recargar();
+      return;
+    }
+    avisar(e.message, "error");
+  }, [avisar]);
+
   const cargar = useCallback(async () => {
     if (!leerUrl()) return;
     setCargando(true);
@@ -86,8 +97,8 @@ export default function App() {
       }
       return true;
     } catch (e) {
-      avisar(e.message, "error");
-      return false;
+      await manejarError(e, cargar);
+      return e?.estado === 404;   // se cierra el modal: ya no hay nada que editar
     }
   }
 
@@ -99,7 +110,7 @@ export default function App() {
       setItems((previos) => previos.map((i) => (i.item_id === nuevo.item_id ? nuevo : i)));
     } catch (e) {
       setItems(antes); // se revierte lo que se pintó por adelantado
-      avisar(e.message, "error");
+      await manejarError(e, cargar);
     }
   }
 
@@ -111,6 +122,11 @@ export default function App() {
       await api.eliminar(item.item_id);
       avisar("Eliminado");
     } catch (e) {
+      if (e?.estado === 404) {
+        // Ya no estaba: el borrado local es el resultado correcto.
+        avisar("Ese ítem ya no existía.");
+        return;
+      }
       setItems(antes);
       avisar(e.message, "error");
     }
