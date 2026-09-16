@@ -17,6 +17,23 @@ export default function App() {
   const [brindis, setBrindis] = useState(null);
   const [modal, setModal] = useState(null);
   const [filtros, setFiltros] = useState({ tipo: "", estado: "", busqueda: "" });
+  const [tema, setTema] = useState(() => {
+    try {
+      return localStorage.getItem("catalogo.tema") || "claro";
+    } catch {
+      return "claro";
+    }
+  });
+
+  // El tema vive en el atributo data-tema del <html>; el CSS hace el resto.
+  useEffect(() => {
+    document.documentElement.dataset.tema = tema;
+    try {
+      localStorage.setItem("catalogo.tema", tema);
+    } catch {
+      /* sin persistencia en modo privado */
+    }
+  }, [tema]);
 
   const avisar = useCallback((texto, tipo = "ok") => {
     setBrindis({ texto, tipo });
@@ -118,6 +135,14 @@ export default function App() {
             <h1>Mi catálogo</h1>
           </div>
           <span className="crece" />
+          <button
+            className="icono-boton"
+            onClick={() => setTema(tema === "claro" ? "oscuro" : "claro")}
+            title={tema === "claro" ? "Cambiar a oscuro" : "Cambiar a claro"}
+            aria-label="Cambiar tema"
+          >
+            {tema === "claro" ? "🌙" : "☀️"}
+          </button>
           <button className="icono-boton" onClick={cargar} title="Actualizar" aria-label="Actualizar">↻</button>
           <button className="icono-boton" onClick={exportar} title="Exportar a S3">Exportar</button>
           <button
