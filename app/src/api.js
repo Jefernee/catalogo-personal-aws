@@ -2,11 +2,15 @@
 
 const LLAVE = "catalogo.api";
 
+// Si no hay nada guardado, se usa VITE_API_URL (archivo .env.local,
+// que no se sube a git). Asi no hay que escribir la URL en cada equipo.
+const POR_DEFECTO = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+
 export function leerUrl() {
   try {
-    return localStorage.getItem(LLAVE) || "";
+    return localStorage.getItem(LLAVE) || POR_DEFECTO;
   } catch {
-    return "";
+    return POR_DEFECTO;
   }
 }
 

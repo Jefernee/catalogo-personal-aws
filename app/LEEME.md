@@ -31,7 +31,15 @@ npm install
 npm run dev
 ```
 
-Abre <http://localhost:5173> y pega la URL de tu API. Queda guardada en el navegador.
+Abre <http://localhost:5173>.
+
+La URL de la API sale de `.env.local` (no se sube a git):
+
+```
+VITE_API_URL=https://xxxx.execute-api.us-east-1.amazonaws.com
+```
+
+Sin ese archivo, la app la pide una vez y la guarda en el navegador. Si el archivo existe, entra directa.
 
 ## Compilar
 
