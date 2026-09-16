@@ -66,8 +66,14 @@ async function pedir(ruta, opciones = {}) {
       headers: opciones.body ? { "Content-Type": "application/json" } : undefined,
     });
   } catch {
+    // El navegador no distingue "sin internet" de "CORS" en el error, pero
+    // navigator.onLine sí sabe si hay red: conviene decir lo primero antes de
+    // mandar a revisar la configuración.
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      throw new ErrorDeRed("Parece que no hay conexión a internet.");
+    }
     throw new ErrorDeRed(
-      "No se pudo conectar. Revisa la URL y que CORS esté habilitado en API Gateway."
+      "No se pudo conectar. Puede ser la conexión, la URL de la API o CORS."
     );
   }
 
