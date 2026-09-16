@@ -15,7 +15,7 @@ export default function App() {
   const [items, setItems] = useState([]);
   const [cargando, setCargando] = useState(false);
   const [brindis, setBrindis] = useState(null);
-  const [modal, setModal] = useState(null);
+  const [modal, setModal] = useState(null);   // { tipo: "item" | "diario", item?: {...} }
   const [filtros, setFiltros] = useState({ tipo: "", estado: "", busqueda: "" });
   const [tema, setTema] = useState(() => {
     try {
@@ -71,11 +71,18 @@ export default function App() {
 
   const delCatalogo = useMemo(() => items.filter((i) => i.tipo !== "diario"), [items]);
 
-  async function crear(item) {
+  async function guardar(cuerpo) {
+    const editando = modal?.item;
     try {
-      const creado = await api.crear(item);
-      setItems((previos) => [creado, ...previos]);
-      avisar(`"${creado.titulo}" agregado`);
+      if (editando) {
+        const nuevo = await api.actualizar(editando.item_id, cuerpo);
+        setItems((previos) => previos.map((i) => (i.item_id === nuevo.item_id ? nuevo : i)));
+        avisar("Cambios guardados");
+      } else {
+        const creado = await api.crear(cuerpo);
+        setItems((previos) => [creado, ...previos]);
+        avisar(`"${creado.titulo}" agregado`);
+      }
       return true;
     } catch (e) {
       avisar(e.message, "error");
@@ -195,7 +202,13 @@ export default function App() {
               />
             ) : (
               visibles.map((item) => (
-                <Tarjeta key={item.item_id} item={item} alActualizar={actualizar} alBorrar={borrar} />
+                <Tarjeta
+                  key={item.item_id}
+                  item={item}
+                  alActualizar={actualizar}
+                  alBorrar={borrar}
+                  alEditar={(i) => setModal({ tipo: "item", item: i })}
+                />
               ))
             )}
           </div>
@@ -205,7 +218,12 @@ export default function App() {
               <Vacio icono="📔" texto="Todavía no hay entradas en el diario." />
             ) : (
               visibles.map((item) => (
-                <EntradaDiario key={item.item_id} item={item} alBorrar={borrar} />
+                <EntradaDiario
+                  key={item.item_id}
+                  item={item}
+                  alBorrar={borrar}
+                  alEditar={(i) => setModal({ tipo: "diario", item: i })}
+                />
               ))
             )}
           </div>
@@ -214,14 +232,28 @@ export default function App() {
 
       <button
         className="flotante"
-        onClick={() => setModal(pestana === "diario" ? "diario" : "item")}
+        onClick={() => setModal({ tipo: pestana === "diario" ? "diario" : "item" })}
       >
         <span aria-hidden="true">+</span>
         {pestana === "diario" ? "Nueva entrada" : "Agregar"}
       </button>
 
-      {modal === "item" && <ModalItem alCerrar={() => setModal(null)} alGuardar={crear} />}
-      {modal === "diario" && <ModalDiario alCerrar={() => setModal(null)} alGuardar={crear} />}
+      {modal?.tipo === "item" && (
+        <ModalItem
+          key={modal.item?.item_id || "nuevo"}
+          item={modal.item}
+          alCerrar={() => setModal(null)}
+          alGuardar={guardar}
+        />
+      )}
+      {modal?.tipo === "diario" && (
+        <ModalDiario
+          key={modal.item?.item_id || "nuevo"}
+          item={modal.item}
+          alCerrar={() => setModal(null)}
+          alGuardar={guardar}
+        />
+      )}
 
       {brindis && (
         <div className={`brindis ${brindis.tipo === "error" ? "error" : ""}`} role="status">

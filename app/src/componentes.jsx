@@ -26,7 +26,7 @@ export function Estrellas({ valor = 0, alElegir }) {
   );
 }
 
-export function Tarjeta({ item, alActualizar, alBorrar }) {
+export function Tarjeta({ item, alActualizar, alBorrar, alEditar }) {
   const detalle = detalleDe(item);
   const siguiente = SIGUIENTE_ESTADO[item.estado] || "pendiente";
 
@@ -56,6 +56,9 @@ export function Tarjeta({ item, alActualizar, alBorrar }) {
           → {ETIQUETAS[siguiente]}
         </button>
         <span style={{ flex: 1 }} />
+        <button className="mini" onClick={() => alEditar(item)} aria-label={`Editar ${item.titulo}`}>
+          Editar
+        </button>
         <button className="mini peligro" onClick={() => alBorrar(item)} aria-label={`Borrar ${item.titulo}`}>
           Borrar
         </button>
@@ -64,13 +67,14 @@ export function Tarjeta({ item, alActualizar, alBorrar }) {
   );
 }
 
-export function EntradaDiario({ item, alBorrar }) {
+export function EntradaDiario({ item, alBorrar, alEditar }) {
   return (
     <article className="entrada">
       <header>
         <h3>{item.titulo}</h3>
         <span className="fecha">{item.fecha || (item.creado_en || "").slice(0, 10)}</span>
         <span style={{ flex: 1 }} />
+        <button className="mini" onClick={() => alEditar(item)}>Editar</button>
         <button className="mini peligro" onClick={() => alBorrar(item)}>Borrar</button>
       </header>
       {item.contenido && <p>{item.contenido}</p>}
@@ -145,14 +149,20 @@ export function Metricas({ items }) {
   );
 }
 
-export function ModalItem({ alCerrar, alGuardar }) {
+export function ModalItem({ alCerrar, alGuardar, item }) {
+  const editando = Boolean(item);
   const [enviando, setEnviando] = useState(false);
-  const [datos, setDatos] = useState({
-    titulo: "",
-    tipo: "libro",
-    estado: "pendiente",
-    extra: "",
-    notas: "",
+  const [datos, setDatos] = useState(() => {
+    if (!item) {
+      return { titulo: "", tipo: "libro", estado: "pendiente", extra: "", notas: "" };
+    }
+    return {
+      titulo: item.titulo || "",
+      tipo: item.tipo,
+      estado: item.estado,
+      extra: detalleDe(item),
+      notas: item.notas || "",
+    };
   });
 
   useEffect(() => {
@@ -167,10 +177,15 @@ export function ModalItem({ alCerrar, alGuardar }) {
     e.preventDefault();
     if (!datos.titulo.trim()) return;
     setEnviando(true);
-    const item = { titulo: datos.titulo.trim(), tipo: datos.tipo, estado: datos.estado };
-    if (datos.extra.trim()) item[campoExtra.clave] = datos.extra.trim();
-    if (datos.notas.trim()) item.notas = datos.notas.trim();
-    const ok = await alGuardar(item);
+    const cuerpo = { titulo: datos.titulo.trim(), tipo: datos.tipo, estado: datos.estado };
+    // Se mandan tambien vacios al editar, para poder borrar un valor.
+    cuerpo[campoExtra.clave] = datos.extra.trim();
+    cuerpo.notas = datos.notas.trim();
+    if (!editando) {
+      if (!cuerpo[campoExtra.clave]) delete cuerpo[campoExtra.clave];
+      if (!cuerpo.notas) delete cuerpo.notas;
+    }
+    const ok = await alGuardar(cuerpo);
     setEnviando(false);
     if (ok) alCerrar();
   }
@@ -178,7 +193,7 @@ export function ModalItem({ alCerrar, alGuardar }) {
   return (
     <div className="fondo-modal" onMouseDown={(e) => e.target === e.currentTarget && alCerrar()}>
       <form className="modal" onSubmit={enviar}>
-        <h2>Agregar al catálogo</h2>
+        <h2>{editando ? "Editar" : "Agregar al catálogo"}</h2>
 
         <div className="campo">
           <label htmlFor="titulo">Título</label>
@@ -235,7 +250,7 @@ export function ModalItem({ alCerrar, alGuardar }) {
         <div className="pie-modal">
           <button type="button" className="boton" onClick={alCerrar}>Cancelar</button>
           <button type="submit" className="boton primario" disabled={enviando}>
-            {enviando ? "Guardando…" : "Agregar"}
+            {enviando ? "Guardando…" : editando ? "Guardar cambios" : "Agregar"}
           </button>
         </div>
       </form>
@@ -243,10 +258,15 @@ export function ModalItem({ alCerrar, alGuardar }) {
   );
 }
 
-export function ModalDiario({ alCerrar, alGuardar }) {
+export function ModalDiario({ alCerrar, alGuardar, item }) {
+  const editando = Boolean(item);
   const [enviando, setEnviando] = useState(false);
   const hoy = new Date().toISOString().slice(0, 10);
-  const [datos, setDatos] = useState({ titulo: "", fecha: hoy, contenido: "" });
+  const [datos, setDatos] = useState({
+    titulo: item?.titulo || "",
+    fecha: item?.fecha || hoy,
+    contenido: item?.contenido || "",
+  });
 
   useEffect(() => {
     const cerrarConEsc = (e) => e.key === "Escape" && alCerrar();
@@ -271,7 +291,7 @@ export function ModalDiario({ alCerrar, alGuardar }) {
   return (
     <div className="fondo-modal" onMouseDown={(e) => e.target === e.currentTarget && alCerrar()}>
       <form className="modal" onSubmit={enviar}>
-        <h2>Nueva entrada del diario</h2>
+        <h2>{editando ? "Editar entrada" : "Nueva entrada del diario"}</h2>
 
         <div className="dos-columnas">
           <div className="campo">
@@ -309,7 +329,7 @@ export function ModalDiario({ alCerrar, alGuardar }) {
         <div className="pie-modal">
           <button type="button" className="boton" onClick={alCerrar}>Cancelar</button>
           <button type="submit" className="boton primario" disabled={enviando}>
-            {enviando ? "Guardando…" : "Guardar"}
+            {enviando ? "Guardando…" : editando ? "Guardar cambios" : "Guardar"}
           </button>
         </div>
       </form>

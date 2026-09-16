@@ -55,8 +55,8 @@ npm run preview    # sirve dist/ para revisarlo
 ## Qué hace
 
 - **Métricas** arriba: total, pendientes, en curso, terminados y rating promedio.
-- **Catálogo** en tarjetas: buscar por título, filtrar por tipo y estado, avanzar el estado con un clic, calificar con estrellas cuando algo queda terminado, borrar.
-- **Diario** en su propia pestaña, con fecha y contenido.
+- **Catálogo** en tarjetas: buscar por título, filtrar por tipo y estado, avanzar el estado con un clic, calificar con estrellas cuando algo queda terminado, **editar** cualquier campo y borrar.
+- **Diario** en su propia pestaña, con fecha y contenido, también editable.
 - **Exportar**: dispara `POST /export` y avisa cuántos registros subió a S3 y con qué nombre. Desde la pestaña del diario exporta el diario (`?tipo=diario`).
 - **Instalable**: en Chrome/Edge aparece el icono de instalar en la barra de direcciones; en el celular, "Agregar a pantalla de inicio". Requiere servirla por HTTPS (en `localhost` funciona para probar, pero el service worker solo se registra bajo HTTPS).
 

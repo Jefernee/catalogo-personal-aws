@@ -199,6 +199,27 @@ def test_actualizar_deja_marca_de_tiempo(lf):
     assert "actualizado_en" in cuerpo
 
 
+def test_actualizar_con_cadena_vacia_limpia_el_campo(lf):
+    """Editar desde la app manda "" para borrar un dato."""
+    item = crear_item(lf, autor="Autor viejo", notas="nota vieja")
+    _, cuerpo, _ = llamar(lf, "PUT", "/catalogo", item_id=item["item_id"],
+                          body={"autor": "", "notas": ""})
+    assert cuerpo["autor"] == ""
+    assert cuerpo["notas"] == ""
+
+
+def test_actualizar_todo_desde_el_formulario_de_edicion(lf):
+    """El modal manda titulo, tipo, estado y los extras en una sola llamada."""
+    item = crear_item(lf, titulo="Con error", autor="X")
+    _, cuerpo, _ = llamar(lf, "PUT", "/catalogo", item_id=item["item_id"], body={
+        "titulo": "Corregido", "tipo": "libro", "estado": "en_curso",
+        "autor": "Autor bueno", "notas": "nota",
+    })
+    assert cuerpo["titulo"] == "Corregido"
+    assert cuerpo["autor"] == "Autor bueno"
+    assert cuerpo["estado"] == "en_curso"
+
+
 def test_actualizar_id_inexistente_devuelve_404(lf):
     status, _, _ = llamar(lf, "PUT", "/catalogo", item_id="no-existe",
                           body={"estado": "terminado"})
