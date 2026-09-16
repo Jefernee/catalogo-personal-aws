@@ -1,0 +1,76 @@
+[
+  {
+    "tipo": "libro",
+    "titulo": "El nombre del viento",
+    "estado": "terminado",
+    "rating": 5,
+    "autor": "Patrick Rothfuss",
+    "fecha_consumido": "2026-08-14",
+    "notas": "Mejor de lo que esperaba",
+    "tags": ["fantasia", "releer"]
+  },
+  {
+    "tipo": "libro",
+    "titulo": "Designing Data-Intensive Applications",
+    "estado": "en_curso",
+    "autor": "Martin Kleppmann",
+    "tags": ["tecnico", "backend"]
+  },
+  {
+    "tipo": "pelicula",
+    "titulo": "Arrival",
+    "estado": "terminado",
+    "rating": 5,
+    "director": "Denis Villeneuve",
+    "fecha_consumido": "2026-07-02"
+  },
+  {
+    "tipo": "serie",
+    "titulo": "Severance",
+    "estado": "en_curso",
+    "plataforma": "Apple TV+",
+    "notas": "Voy en la temporada 1"
+  },
+  {
+    "tipo": "serie",
+    "titulo": "Dark",
+    "estado": "pendiente",
+    "plataforma": "Netflix",
+    "tags": ["recomendada"]
+  },
+  {
+    "tipo": "juego",
+    "titulo": "Hollow Knight",
+    "estado": "abandonado",
+    "rating": 4,
+    "plataforma": "Steam",
+    "notas": "Muy dificil, lo retomo despues"
+  },
+  {
+    "tipo": "musica",
+    "titulo": "In Rainbows",
+    "estado": "terminado",
+    "rating": 5,
+    "autor": "Radiohead"
+  },
+  {
+    "tipo": "restaurante",
+    "titulo": "La Oruga y la Cebada",
+    "estado": "terminado",
+    "rating": 4,
+    "ciudad": "San Luis Potosi",
+    "fecha_consumido": "2026-09-05"
+  },
+  {
+    "tipo": "diario",
+    "titulo": "Arranca el proyecto final",
+    "contenido": "Elegi catalogo personal. La tabla ya esta creada y la Lambda responde.",
+    "fecha": "2026-09-15"
+  },
+  {
+    "tipo": "diario",
+    "titulo": "Primer export a S3",
+    "contenido": "El endpoint /export subio el archivo al bucket a la primera. Faltaba s3:PutObject en el rol.",
+    "fecha": "2026-09-16"
+  }
+]
