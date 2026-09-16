@@ -22,6 +22,29 @@ export function guardarUrl(url) {
   }
 }
 
+/**
+ * Toma la URL de la API del propio enlace y la guarda en este dispositivo:
+ *
+ *     https://.../catalogo-personal-aws/#api=https://xxxx.execute-api...
+ *
+ * Asi el enlace (guardado en el gestor de contrasenas, por ejemplo) configura
+ * la app de una vez, sin que la URL viaje dentro de la pagina publicada.
+ * Despues se limpia la barra de direcciones para no dejarla a la vista.
+ */
+export function tomarUrlDelEnlace() {
+  try {
+    const crudo = location.hash.slice(1) || location.search.slice(1);
+    if (!crudo) return;
+    const valor = new URLSearchParams(crudo).get("api");
+    if (!valor || !/^https?:\/\//.test(valor)) return;
+
+    guardarUrl(valor);
+    history.replaceState(null, "", location.pathname);
+  } catch {
+    /* si algo falla, la app simplemente pide la URL como siempre */
+  }
+}
+
 export class ErrorDeRed extends Error {}
 
 /** Error de la API que conserva el codigo HTTP para poder reaccionar a el. */
