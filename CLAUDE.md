@@ -177,8 +177,8 @@ python pruebas_e2e.py <url>        # la API real, ya desplegada
 
 ## Pendientes
 
-- [ ] Confirmar con Ericka (la profesora) que el dominio *catálogo personal* está libre.
-      Mel tomó gestor de tareas, Dani tracker de hábitos, Andrés reservaciones, Joan inventario.
+- [x] Dominio anunciado en el grupo del curso (15/09/2026), igual que los compañeros:
+      Mel gestor de tareas, Dani tracker de hábitos, Andrés reservaciones, Joan inventario.
 - [ ] Llenar el catálogo con datos reales antes de la demo (mínimo 5).
 - [ ] Ensayar los 10-15 minutos: intro, diagrama, demo en vivo, una decisión, preguntas.
 - [ ] Opcional (bonus, $0): API Key en API Gateway, GSI por `tipo`+`estado`, Pulumi.
