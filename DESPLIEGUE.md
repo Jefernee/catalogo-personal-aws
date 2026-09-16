@@ -90,7 +90,7 @@ Deja 10 registros en la tabla (8 de catálogo + 2 de diario). El proyecto pide e
 **Si no tienes el AWS CLI configurado**, este paso se hace **después** del paso 6, cargando los datos a través de tu propia API:
 
 ```bash
-python cargar_datos.py https://TU-ID.execute-api.us-east-1.amazonaws.com/dev
+python cargar_datos.py https://TU-ID.execute-api.us-east-1.amazonaws.com
 ```
 
 **Si sí lo tienes** (`aws configure` ya hecho), va directo a DynamoDB y puedes hacerlo aquí mismo:
@@ -119,9 +119,12 @@ Luego, en **Routes**, crear estas seis (todas apuntando a la misma Lambda):
 | DELETE | `/catalogo/{id}` |
 | POST | `/export` |
 
-Stage: `dev` (con **Auto-deploy** activado).
+Etapa: **`$default`** con implementación automática (es la que crea el asistente).
 
-Copia la **Invoke URL** — se ve así: `https://abc123.execute-api.us-east-1.amazonaws.com/dev`
+Copia la **URL para invocar** — se ve así: `https://abc123.execute-api.us-east-1.amazonaws.com`
+
+Con la etapa `$default` la URL no lleva sufijo. Si en su lugar creas una etapa con nombre
+(por ejemplo `dev`), la URL termina en `/dev` y ese sufijo va en todas las llamadas.
 
 > Si te da **403**, API Gateway no tiene permiso para invocar la Lambda: revisa el resource-based policy de la función.
 > Si te da **502**, el return de la Lambda no trae `statusCode`, `headers` o `body`.
@@ -156,10 +159,10 @@ Tiene que mostrar datos reales de tus invocaciones, así que créalo **después*
 
 ```bash
 # QA automatico: 15 verificaciones contra la API real
-python pruebas_e2e.py https://TU-ID.execute-api.us-east-1.amazonaws.com/dev
+python pruebas_e2e.py https://TU-ID.execute-api.us-east-1.amazonaws.com
 
 # y el guion de la demo
-export API=https://TU-ID.execute-api.us-east-1.amazonaws.com/dev
+export API=https://TU-ID.execute-api.us-east-1.amazonaws.com
 bash demo.sh
 ```
 

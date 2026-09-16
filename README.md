@@ -54,7 +54,7 @@ Los roles IAM con mínimo privilegio no son una capa aparte del diagrama: son un
 ## Ejemplo de llamada
 
 ```bash
-curl -X POST https://TU-ID.execute-api.us-east-1.amazonaws.com/dev/catalogo \
+curl -X POST https://TU-ID.execute-api.us-east-1.amazonaws.com/catalogo \
   -H "Content-Type: application/json" \
   -d '{"tipo":"libro","titulo":"Piranesi","autor":"Susanna Clarke","estado":"pendiente"}'
 ```
@@ -114,7 +114,7 @@ python -m pytest tests -v
 Con la API ya desplegada, las pruebas de humo contra AWS de verdad:
 
 ```bash
-python pruebas_e2e.py https://TU-ID.execute-api.us-east-1.amazonaws.com/dev
+python pruebas_e2e.py https://TU-ID.execute-api.us-east-1.amazonaws.com
 ```
 
 Verifican lo que el emulador no puede ver: que API Gateway esté conectado, que el rol IAM tenga los permisos y que el export llegue al bucket. Crean y eliminan sus propios registros. Solo usan la librería estándar.

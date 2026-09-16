@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Demo en vivo - orden del proyecto: crear, listar, actualizar, exportar.
 #
-#   export API=https://TU-ID.execute-api.us-east-1.amazonaws.com/dev
+#   export API=https://TU-ID.execute-api.us-east-1.amazonaws.com
 #   bash demo.sh
 #
 # Despues de correrlo, mostrar en la consola de AWS, en este orden:
@@ -14,7 +14,7 @@ set -e
 
 if [ -z "$API" ]; then
   echo "Falta la variable API. Ejemplo:"
-  echo "  export API=https://abc123.execute-api.us-east-1.amazonaws.com/dev"
+  echo "  export API=https://abc123.execute-api.us-east-1.amazonaws.com"
   exit 1
 fi
 
