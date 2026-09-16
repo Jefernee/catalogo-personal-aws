@@ -112,6 +112,15 @@ export const SIGUIENTE_ESTADO = {
   abandonado: "en_curso",
 };
 
+// El boton dice que va a pasar, no a que estado salta: "Empezar" se
+// entiende mejor que "-> En curso".
+export const ACCION_ESTADO = {
+  pendiente: "Empezar",
+  en_curso: "Terminar",
+  terminado: "Reiniciar",
+  abandonado: "Retomar",
+};
+
 export function detalleDe(item) {
   return [item.autor, item.director, item.plataforma, item.ciudad].filter(Boolean)[0] || "";
 }

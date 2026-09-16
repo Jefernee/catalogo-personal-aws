@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  ACCION_ESTADO,
   CAMPO_EXTRA,
   ESTADOS,
   ETIQUETAS,
@@ -8,15 +9,21 @@ import {
   TIPOS,
   detalleDe,
 } from "./api";
+import { Basura, Flecha, Lapiz, Lupa } from "./iconos";
 
-export function Estrellas({ valor = 0, alElegir }) {
+export function Estrellas({ valor = 0, alElegir, apagadas = false }) {
   return (
-    <div className="estrellas" role="group" aria-label="Calificación">
+    <div
+      className={`estrellas ${apagadas ? "apagadas" : ""}`}
+      role="group"
+      aria-label={`Calificación: ${Number(valor) || "sin calificar"}`}
+    >
       {[1, 2, 3, 4, 5].map((n) => (
         <button
           key={n}
           className={n <= Number(valor) ? "activa" : ""}
-          aria-label={`${n} de 5`}
+          title={`${n} de 5`}
+          aria-label={`Calificar con ${n}`}
           onClick={() => alElegir(n === Number(valor) ? 0 : n)}
         >
           {n <= Number(valor) ? "★" : "☆"}
@@ -27,40 +34,56 @@ export function Estrellas({ valor = 0, alElegir }) {
 }
 
 export function Tarjeta({ item, alActualizar, alBorrar, alEditar }) {
-  const detalle = detalleDe(item);
   const siguiente = SIGUIENTE_ESTADO[item.estado] || "pendiente";
+  const subtitulo = [ETIQUETAS[item.tipo], detalleDe(item), item.fecha_consumido]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <article className="tarjeta">
       <div className="tarjeta-arriba">
-        <span className="emoji" aria-hidden="true">{ICONOS[item.tipo] || "•"}</span>
+        <span className="avatar" aria-hidden="true">{ICONOS[item.tipo] || "•"}</span>
         <div style={{ minWidth: 0, flex: 1 }}>
           <h3>{item.titulo}</h3>
-          <div className="sub">
-            {ETIQUETAS[item.tipo]}
-            {detalle ? ` · ${detalle}` : ""}
-            {item.fecha_consumido ? ` · ${item.fecha_consumido}` : ""}
-          </div>
+          <div className="sub">{subtitulo}</div>
         </div>
         <span className={`insignia ${item.estado}`}>{ETIQUETAS[item.estado]}</span>
       </div>
 
       {item.notas && <p className="notas">{item.notas}</p>}
 
-      {item.estado === "terminado" && (
-        <Estrellas valor={item.rating} alElegir={(n) => alActualizar(item, { rating: n })} />
-      )}
+      {/* Las estrellas se ven siempre; atenuadas mientras no esté terminado. */}
+      <Estrellas
+        valor={item.rating}
+        apagadas={item.estado !== "terminado" && !Number(item.rating)}
+        alElegir={(n) => alActualizar(item, { rating: n })}
+      />
 
       <div className="acciones">
-        <button className="mini" onClick={() => alActualizar(item, { estado: siguiente })}>
-          → {ETIQUETAS[siguiente]}
+        <button
+          className="btn btn--acento btn--sm"
+          onClick={() => alActualizar(item, { estado: siguiente })}
+          title={`Pasar a ${ETIQUETAS[siguiente].toLowerCase()}`}
+        >
+          <Flecha width={14} height={14} />
+          {ACCION_ESTADO[item.estado] || "Avanzar"}
         </button>
-        <span style={{ flex: 1 }} />
-        <button className="mini" onClick={() => alEditar(item)} aria-label={`Editar ${item.titulo}`}>
-          Editar
+        <span className="separador" />
+        <button
+          className="btn btn--sutil btn--sm btn--icono"
+          onClick={() => alEditar(item)}
+          title="Editar"
+          aria-label={`Editar ${item.titulo}`}
+        >
+          <Lapiz width={15} height={15} />
         </button>
-        <button className="mini peligro" onClick={() => alBorrar(item)} aria-label={`Borrar ${item.titulo}`}>
-          Borrar
+        <button
+          className="btn btn--peligro btn--sm btn--icono"
+          onClick={() => alBorrar(item)}
+          title="Borrar"
+          aria-label={`Borrar ${item.titulo}`}
+        >
+          <Basura width={15} height={15} />
         </button>
       </div>
     </article>
@@ -74,8 +97,22 @@ export function EntradaDiario({ item, alBorrar, alEditar }) {
         <h3>{item.titulo}</h3>
         <span className="fecha">{item.fecha || (item.creado_en || "").slice(0, 10)}</span>
         <span style={{ flex: 1 }} />
-        <button className="mini" onClick={() => alEditar(item)}>Editar</button>
-        <button className="mini peligro" onClick={() => alBorrar(item)}>Borrar</button>
+        <button
+          className="btn btn--sutil btn--sm btn--icono"
+          onClick={() => alEditar(item)}
+          title="Editar"
+          aria-label={`Editar ${item.titulo}`}
+        >
+          <Lapiz width={15} height={15} />
+        </button>
+        <button
+          className="btn btn--peligro btn--sm btn--icono"
+          onClick={() => alBorrar(item)}
+          title="Borrar"
+          aria-label={`Borrar ${item.titulo}`}
+        >
+          <Basura width={15} height={15} />
+        </button>
       </header>
       {item.contenido && <p>{item.contenido}</p>}
     </article>
@@ -85,13 +122,16 @@ export function EntradaDiario({ item, alBorrar, alEditar }) {
 export function Filtros({ tipo, estado, busqueda, alCambiar }) {
   return (
     <div className="filtros">
-      <input
-        className="buscador"
-        type="search"
-        placeholder="Buscar por título…"
-        value={busqueda}
-        onChange={(e) => alCambiar({ busqueda: e.target.value })}
-      />
+      <div className="campo-busqueda">
+        <Lupa width={15} height={15} />
+        <input
+          type="search"
+          placeholder="Buscar por título…"
+          aria-label="Buscar por título"
+          value={busqueda}
+          onChange={(e) => alCambiar({ busqueda: e.target.value })}
+        />
+      </div>
       <div className="grupo-chips">
         <span className="rotulo">Tipo</span>
         <Chips valores={TIPOS} activo={tipo} alElegir={(v) => alCambiar({ tipo: v })} />
@@ -122,7 +162,6 @@ function Chips({ valores, activo, alElegir }) {
 }
 
 export function Metricas({ items }) {
-  const total = items.length;
   const cuenta = (e) => items.filter((i) => i.estado === e).length;
   const calificados = items.filter((i) => Number(i.rating) > 0);
   const promedio = calificados.length
@@ -130,7 +169,7 @@ export function Metricas({ items }) {
     : "—";
 
   const datos = [
-    { rotulo: "En el catálogo", numero: total },
+    { rotulo: "En el catálogo", numero: items.length },
     { rotulo: "Pendientes", numero: cuenta("pendiente") },
     { rotulo: "En curso", numero: cuenta("en_curso") },
     { rotulo: "Terminados", numero: cuenta("terminado") },
@@ -149,27 +188,31 @@ export function Metricas({ items }) {
   );
 }
 
+/** Cierra el modal con Escape. */
+function useEscape(alCerrar) {
+  useEffect(() => {
+    const alPresionar = (e) => e.key === "Escape" && alCerrar();
+    window.addEventListener("keydown", alPresionar);
+    return () => window.removeEventListener("keydown", alPresionar);
+  }, [alCerrar]);
+}
+
 export function ModalItem({ alCerrar, alGuardar, item }) {
   const editando = Boolean(item);
   const [enviando, setEnviando] = useState(false);
-  const [datos, setDatos] = useState(() => {
-    if (!item) {
-      return { titulo: "", tipo: "libro", estado: "pendiente", extra: "", notas: "" };
-    }
-    return {
-      titulo: item.titulo || "",
-      tipo: item.tipo,
-      estado: item.estado,
-      extra: detalleDe(item),
-      notas: item.notas || "",
-    };
-  });
+  const [datos, setDatos] = useState(() =>
+    item
+      ? {
+          titulo: item.titulo || "",
+          tipo: item.tipo,
+          estado: item.estado,
+          extra: detalleDe(item),
+          notas: item.notas || "",
+        }
+      : { titulo: "", tipo: "libro", estado: "pendiente", extra: "", notas: "" }
+  );
 
-  useEffect(() => {
-    const cerrarConEsc = (e) => e.key === "Escape" && alCerrar();
-    window.addEventListener("keydown", cerrarConEsc);
-    return () => window.removeEventListener("keydown", cerrarConEsc);
-  }, [alCerrar]);
+  useEscape(alCerrar);
 
   const campoExtra = CAMPO_EXTRA[datos.tipo];
 
@@ -177,14 +220,16 @@ export function ModalItem({ alCerrar, alGuardar, item }) {
     e.preventDefault();
     if (!datos.titulo.trim()) return;
     setEnviando(true);
+
     const cuerpo = { titulo: datos.titulo.trim(), tipo: datos.tipo, estado: datos.estado };
-    // Se mandan tambien vacios al editar, para poder borrar un valor.
+    // Al editar se mandan también vacíos, para poder limpiar un dato.
     cuerpo[campoExtra.clave] = datos.extra.trim();
     cuerpo.notas = datos.notas.trim();
     if (!editando) {
       if (!cuerpo[campoExtra.clave]) delete cuerpo[campoExtra.clave];
       if (!cuerpo.notas) delete cuerpo.notas;
     }
+
     const ok = await alGuardar(cuerpo);
     setEnviando(false);
     if (ok) alCerrar();
@@ -240,7 +285,7 @@ export function ModalItem({ alCerrar, alGuardar, item }) {
           <label htmlFor="notas">Notas</label>
           <textarea
             id="notas"
-            style={{ minHeight: 70 }}
+            style={{ minHeight: 76 }}
             value={datos.notas}
             onChange={(e) => setDatos({ ...datos, notas: e.target.value })}
             placeholder="Opcional"
@@ -248,8 +293,10 @@ export function ModalItem({ alCerrar, alGuardar, item }) {
         </div>
 
         <div className="pie-modal">
-          <button type="button" className="boton" onClick={alCerrar}>Cancelar</button>
-          <button type="submit" className="boton primario" disabled={enviando}>
+          <button type="button" className="btn btn--secundario" onClick={alCerrar}>
+            Cancelar
+          </button>
+          <button type="submit" className="btn btn--primario" disabled={enviando}>
             {enviando ? "Guardando…" : editando ? "Guardar cambios" : "Agregar"}
           </button>
         </div>
@@ -260,19 +307,15 @@ export function ModalItem({ alCerrar, alGuardar, item }) {
 
 export function ModalDiario({ alCerrar, alGuardar, item }) {
   const editando = Boolean(item);
-  const [enviando, setEnviando] = useState(false);
   const hoy = new Date().toISOString().slice(0, 10);
+  const [enviando, setEnviando] = useState(false);
   const [datos, setDatos] = useState({
     titulo: item?.titulo || "",
     fecha: item?.fecha || hoy,
     contenido: item?.contenido || "",
   });
 
-  useEffect(() => {
-    const cerrarConEsc = (e) => e.key === "Escape" && alCerrar();
-    window.addEventListener("keydown", cerrarConEsc);
-    return () => window.removeEventListener("keydown", cerrarConEsc);
-  }, [alCerrar]);
+  useEscape(alCerrar);
 
   async function enviar(e) {
     e.preventDefault();
@@ -327,8 +370,10 @@ export function ModalDiario({ alCerrar, alGuardar, item }) {
         </div>
 
         <div className="pie-modal">
-          <button type="button" className="boton" onClick={alCerrar}>Cancelar</button>
-          <button type="submit" className="boton primario" disabled={enviando}>
+          <button type="button" className="btn btn--secundario" onClick={alCerrar}>
+            Cancelar
+          </button>
+          <button type="submit" className="btn btn--primario" disabled={enviando}>
             {enviando ? "Guardando…" : editando ? "Guardar cambios" : "Guardar"}
           </button>
         </div>

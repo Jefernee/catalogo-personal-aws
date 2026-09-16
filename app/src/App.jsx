@@ -8,6 +8,7 @@ import {
   ModalItem,
   Tarjeta,
 } from "./componentes";
+import { Alerta, Check, Engrane, Luna, Mas, Nube, Recargar, Sol } from "./iconos";
 
 export default function App() {
   const [url, setUrl] = useState(leerUrl());
@@ -143,25 +144,36 @@ export default function App() {
           </div>
           <span className="crece" />
           <button
-            className="icono-boton"
+            className="btn btn--sutil btn--icono"
             onClick={() => setTema(tema === "claro" ? "oscuro" : "claro")}
-            title={tema === "claro" ? "Cambiar a oscuro" : "Cambiar a claro"}
+            title={tema === "claro" ? "Cambiar a tema oscuro" : "Cambiar a tema claro"}
             aria-label="Cambiar tema"
           >
-            {tema === "claro" ? "🌙" : "☀️"}
+            {tema === "claro" ? <Luna /> : <Sol />}
           </button>
-          <button className="icono-boton" onClick={cargar} title="Actualizar" aria-label="Actualizar">↻</button>
-          <button className="icono-boton" onClick={exportar} title="Exportar a S3">Exportar</button>
           <button
-            className="icono-boton"
+            className="btn btn--sutil btn--icono"
+            onClick={cargar}
+            title="Actualizar"
+            aria-label="Actualizar"
+            disabled={cargando}
+          >
+            <Recargar />
+          </button>
+          <button
+            className="btn btn--sutil btn--icono"
             title="Cambiar la URL de la API"
             aria-label="Configuración"
             onClick={() => {
               const nueva = prompt("URL de la API", leerUrl());
-              if (nueva !== null) conectar(nueva);
+              if (nueva !== null && nueva.trim()) conectar(nueva);
             }}
           >
-            ⚙
+            <Engrane />
+          </button>
+          <button className="btn btn--secundario" onClick={exportar} title="Exportar a S3">
+            <Nube />
+            <span className="etiqueta-boton">Exportar</span>
           </button>
         </div>
       </header>
@@ -194,10 +206,25 @@ export default function App() {
             {visibles.length === 0 ? (
               <Vacio
                 icono="🗂️"
+                titulo={items.length === 0 ? "Tu catálogo está vacío" : "Sin resultados"}
                 texto={
                   items.length === 0
-                    ? "Tu catálogo está vacío. Agrega lo primero."
-                    : "Nada coincide con esos filtros."
+                    ? "Agrega el primer libro, serie o juego que quieras seguir."
+                    : "Ningún ítem coincide con esos filtros."
+                }
+                accion={
+                  items.length === 0 ? (
+                    <button className="btn btn--primario" onClick={() => setModal({ tipo: "item" })}>
+                      <Mas width={16} height={16} /> Agregar el primero
+                    </button>
+                  ) : (
+                    <button
+                      className="btn btn--secundario"
+                      onClick={() => setFiltros({ tipo: "", estado: "", busqueda: "" })}
+                    >
+                      Limpiar filtros
+                    </button>
+                  )
                 }
               />
             ) : (
@@ -215,7 +242,16 @@ export default function App() {
         ) : (
           <div>
             {visibles.length === 0 ? (
-              <Vacio icono="📔" texto="Todavía no hay entradas en el diario." />
+              <Vacio
+                icono="📔"
+                titulo="El diario está en blanco"
+                texto="Escribe la primera entrada; no se incluye en el export salvo que lo pidas."
+                accion={
+                  <button className="btn btn--primario" onClick={() => setModal({ tipo: "diario" })}>
+                    <Mas width={16} height={16} /> Escribir entrada
+                  </button>
+                }
+              />
             ) : (
               visibles.map((item) => (
                 <EntradaDiario
@@ -231,10 +267,10 @@ export default function App() {
       </main>
 
       <button
-        className="flotante"
+        className="btn btn--primario flotante"
         onClick={() => setModal({ tipo: pestana === "diario" ? "diario" : "item" })}
       >
-        <span aria-hidden="true">+</span>
+        <Mas width={17} height={17} />
         {pestana === "diario" ? "Nueva entrada" : "Agregar"}
       </button>
 
@@ -257,6 +293,7 @@ export default function App() {
 
       {brindis && (
         <div className={`brindis ${brindis.tipo === "error" ? "error" : ""}`} role="status">
+          {brindis.tipo === "error" ? <Alerta width={17} height={17} /> : <Check width={17} height={17} />}
           {brindis.texto}
         </div>
       )}
@@ -264,11 +301,13 @@ export default function App() {
   );
 }
 
-function Vacio({ icono, texto }) {
+function Vacio({ icono, titulo, texto, accion }) {
   return (
     <div className="vacio">
       <div className="grande" aria-hidden="true">{icono}</div>
-      {texto}
+      {titulo && <div className="titulo-vacio">{titulo}</div>}
+      <div>{texto}</div>
+      {accion && <div style={{ marginTop: 18 }}>{accion}</div>}
     </div>
   );
 }
@@ -299,7 +338,7 @@ function PantallaConexion({ alConectar }) {
               placeholder="https://xxxx.execute-api.us-east-1.amazonaws.com"
             />
           </div>
-          <button className="boton primario" style={{ width: "100%" }} type="submit">
+          <button className="btn btn--primario btn--bloque" type="submit">
             Conectar
           </button>
         </form>
