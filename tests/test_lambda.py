@@ -189,6 +189,17 @@ def test_actualizar_a_terminado_fija_la_fecha_sola(lf):
     assert cuerpo["fecha_consumido"] == hoy
 
 
+def test_editar_algo_ya_terminado_no_le_cambia_la_fecha(lf):
+    """Corregir el título de un libro terminado no debe moverle la fecha."""
+    item = crear_item(lf, titulo="El nombre del viento")
+    llamar(lf, "PUT", "/catalogo", item_id=item["item_id"],
+           body={"estado": "terminado", "fecha_consumido": "2026-08-14"})
+    # El formulario de edición siempre manda el estado, aunque no haya cambiado.
+    _, cuerpo, _ = llamar(lf, "PUT", "/catalogo", item_id=item["item_id"],
+                          body={"titulo": "El nombre del viento (2a lectura)", "estado": "terminado"})
+    assert cuerpo["fecha_consumido"] == "2026-08-14"
+
+
 def test_actualizar_respeta_la_fecha_enviada(lf):
     item = crear_item(lf)
     _, cuerpo, _ = llamar(lf, "PUT", "/catalogo", item_id=item["item_id"],

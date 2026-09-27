@@ -192,7 +192,8 @@ def crear(cuerpo):
 
 def actualizar(item_id, cuerpo):
     """PUT /catalogo/{id}"""
-    if not table.get_item(Key={"item_id": item_id}).get("Item"):
+    anterior = table.get_item(Key={"item_id": item_id}).get("Item")
+    if not anterior:
         return responder(404, {"error": "No existe un item con ese id"})
 
     editables = ("titulo", "tipo", "estado") + CAMPOS_EXTRA
@@ -207,8 +208,10 @@ def actualizar(item_id, cuerpo):
     if "fondo" in cambios and cambios["fondo"] not in FONDOS_VALIDOS:
         return responder(400, {"error": f"fondo invalido. Validos: {sorted(FONDOS_VALIDOS)}"})
 
-    # Si se marca como terminado y no viene la fecha, se pone sola.
-    if cambios.get("estado") == "terminado" and "fecha_consumido" not in cambios:
+    # La fecha se pone sola solo al PASAR a terminado. Editar algo que ya estaba
+    # terminado (corregir el título, agregar notas) no le cambia la fecha.
+    pasa_a_terminado = cambios.get("estado") == "terminado" and anterior.get("estado") != "terminado"
+    if pasa_a_terminado and "fecha_consumido" not in cambios:
         cambios["fecha_consumido"] = ahora()[:10]
 
     cambios["actualizado_en"] = ahora()
