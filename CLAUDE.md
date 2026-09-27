@@ -105,7 +105,7 @@ demo.sh                 guion de la demo en vivo
 pruebas_e2e.py          16 verificaciones contra la API desplegada
 tests/                  75 pruebas con pytest + moto
 servidor_local.py       la Lambda real contra AWS emulado, en localhost:8787
-app/                    aplicación React + Vite (PWA instalable), 93 pruebas con vitest
+app/                    aplicación React + Vite (PWA instalable), 95 pruebas con vitest
 frontend/index.html     la misma idea en un archivo, sin dependencias
 DESPLIEGUE.md           paso a paso en la consola de AWS
 PLAN-proyecto-final-modulo3.md   el plan contra la rúbrica
@@ -115,7 +115,7 @@ PLAN-proyecto-final-modulo3.md   el plan contra la rúbrica
 
 ```bash
 python -m pytest tests -q                 # 75 pruebas de la Lambda
-cd app && npm test                        # 93 pruebas de la app
+cd app && npm test                        # 95 pruebas de la app
 python servidor_local.py                  # API local sin AWS, clave "local"
 python pruebas_e2e.py <URL_API> <CLAVE>   # 19 verificaciones contra la API real
 python cargar_datos.py <URL_API> <CLAVE>  # carga los 10 registros de ejemplo

@@ -36,6 +36,9 @@ export function Estrellas({ valor = 0, alElegir, apagadas = false }) {
   );
 }
 
+/** Estados que tiene sentido elegir para cada tipo: una tarea no está "en curso". */
+export const estadosDe = (tipo) => (seCalifica({ tipo }) ? ESTADOS : ["pendiente", "terminado"]);
+
 export function Tarjeta({ item, alActualizar, alBorrar, alEditar }) {
   const paso = siguientePaso(item);
   const hecho = item.estado === "terminado";
@@ -44,8 +47,62 @@ export function Tarjeta({ item, alActualizar, alBorrar, alEditar }) {
     .filter(Boolean)
     .join(" · ");
 
+  const herramientas = (
+    <>
+      <button
+        type="button"
+        className="btn btn--sutil btn--sm btn--icono"
+        onClick={() => alEditar(item)}
+        title="Editar"
+        aria-label={`Editar ${item.titulo}`}
+      >
+        <Lapiz width={15} height={15} />
+      </button>
+      <button
+        type="button"
+        className="btn btn--peligro btn--sm btn--icono"
+        onClick={() => alBorrar(item)}
+        title="Borrar"
+        aria-label={`Borrar ${item.titulo}`}
+      >
+        <Basura width={15} height={15} />
+      </button>
+    </>
+  );
+
+  // Tareas y compras son una lista para palomear: la casilla vacía es lo que
+  // falta, la marcada ya está, y se tacha. Así nadie confunde el botón con el estado.
+  if (diaria) {
+    const que = item.tipo === "compra" ? "comprado" : "hecha";
+    return (
+      <article className={`tarjeta tarjeta--lista ${hecho ? "tarjeta--hecha" : ""}`}>
+        <div className="tarjeta-arriba">
+          <button
+            type="button"
+            role="checkbox"
+            aria-checked={hecho}
+            className="marcar"
+            aria-label={`${item.titulo}: ${que}`}
+            title={hecho ? "Desmarcar" : `Marcar como ${que}`}
+            onClick={() => alActualizar(item, { estado: hecho ? "pendiente" : "terminado" })}
+          >
+            <span className="marcar-circulo" aria-hidden="true">
+              <Check width={15} height={15} />
+            </span>
+          </button>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <h3>{item.titulo}</h3>
+            {subtitulo && <div className="sub">{subtitulo}</div>}
+          </div>
+          <div className="tarjeta-herramientas">{herramientas}</div>
+        </div>
+        {item.notas && <p className="notas">{item.notas}</p>}
+      </article>
+    );
+  }
+
   return (
-    <article className={`tarjeta ${diaria && hecho ? "tarjeta--hecha" : ""}`}>
+    <article className="tarjeta">
       <div className="tarjeta-arriba">
         <span className="avatar" aria-hidden="true">{ICONOS[item.tipo] || "•"}</span>
         <div style={{ minWidth: 0, flex: 1 }}>
@@ -69,31 +126,14 @@ export function Tarjeta({ item, alActualizar, alBorrar, alEditar }) {
       <div className="acciones">
         <button
           type="button"
-          className={`btn btn--sm ${diaria && !hecho ? "btn--ok" : "btn--acento"}`}
+          className="btn btn--sm btn--acento"
           onClick={() => alActualizar(item, { estado: paso.estado })}
         >
-          {diaria && !hecho ? <Check width={14} height={14} /> : <Flecha width={14} height={14} />}
+          <Flecha width={14} height={14} />
           {paso.etiqueta}
         </button>
         <span className="separador" />
-        <button
-          type="button"
-          className="btn btn--sutil btn--sm btn--icono"
-          onClick={() => alEditar(item)}
-          title="Editar"
-          aria-label={`Editar ${item.titulo}`}
-        >
-          <Lapiz width={15} height={15} />
-        </button>
-        <button
-          type="button"
-          className="btn btn--peligro btn--sm btn--icono"
-          onClick={() => alBorrar(item)}
-          title="Borrar"
-          aria-label={`Borrar ${item.titulo}`}
-        >
-          <Basura width={15} height={15} />
-        </button>
+        {herramientas}
       </div>
     </article>
   );
@@ -187,6 +227,8 @@ export function ModalItem({ alCerrar, alGuardar, item, tipoInicial = "tarea", da
   );
 
   const campoExtra = CAMPO_EXTRA[datos.tipo];
+  // Una tarea o una compra nueva siempre empieza por hacer: se marca desde su casilla.
+  const conEstado = seCalifica({ tipo: datos.tipo });
 
   // Cada cambio se le avisa a la app: si se bloquea a media edición, no se pierde.
   useEffect(() => {
@@ -236,23 +278,34 @@ export function ModalItem({ alCerrar, alGuardar, item, tipoInicial = "tarea", da
           />
         </div>
 
-        <div className="dos-columnas">
+        <div className={conEstado ? "dos-columnas" : undefined}>
           <div className="campo">
             <label htmlFor="tipo">Tipo</label>
-            <select id="tipo" value={datos.tipo} onChange={(e) => setDatos({ ...datos, tipo: e.target.value, extra: "" })}>
+            <select
+              id="tipo"
+              value={datos.tipo}
+              onChange={(e) => {
+                const tipo = e.target.value;
+                // Al cambiar a tarea o compra, "en curso" o "abandonado" no aplican.
+                const estado = estadosDe(tipo).includes(datos.estado) ? datos.estado : "pendiente";
+                setDatos({ ...datos, tipo, estado, extra: "" });
+              }}
+            >
               {TIPOS.map((t) => (
                 <option key={t} value={t}>{ICONOS[t]} {ETIQUETAS[t]}</option>
               ))}
             </select>
           </div>
-          <div className="campo">
-            <label htmlFor="estado">Estado</label>
-            <select id="estado" value={datos.estado} onChange={(e) => setDatos({ ...datos, estado: e.target.value })}>
-              {ESTADOS.map((s) => (
-                <option key={s} value={s}>{ETIQUETAS[s]}</option>
-              ))}
-            </select>
-          </div>
+          {conEstado && (
+            <div className="campo">
+              <label htmlFor="estado">Estado</label>
+              <select id="estado" value={datos.estado} onChange={(e) => setDatos({ ...datos, estado: e.target.value })}>
+                {ESTADOS.map((s) => (
+                  <option key={s} value={s}>{ETIQUETAS[s]}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         <div className="campo">

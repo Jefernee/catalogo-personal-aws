@@ -59,7 +59,7 @@ URL no viaja dentro del build publicado.
 ## Pruebas
 
 ```bash
-npm test           # 91 pruebas con vitest: sesión, enlaces, invitación, libro, versión, app completa
+npm test           # 95 pruebas con vitest: sesión, enlaces, invitación, libro, versión, app completa
 ```
 
 Para probarla contra la Lambda real sin tocar AWS, desde la raíz del proyecto:
@@ -90,7 +90,7 @@ npm run preview    # sirve dist/ para revisarlo
   Una nota larga no se parte: la hoja crece y se lee bajando. Cada página tiene su fondo:
   papel, crema, rayado, cuadrícula, lino, rosa, menta, cielo, lavanda o noche. Las hojas
   conservan su color en cualquier tema. El editor escribe directamente sobre la hoja elegida.
-- **Listas.** Tareas y compras (se tachan al marcarlas hechas o compradas) y lo que se lee,
+- **Listas.** Tareas y compras con casilla (vacía por hacer, marcada y tachada ya hecha) y lo que se lee,
   ve o escucha, con estado y estrellas. Búsqueda y filtros por tipo y estado.
 - **Compartir.** Arma una invitación para WhatsApp —qué es el diario, cómo entrar paso a paso
   y los datos de acceso— y deja elegir el contacto. Lleva la clave de invitado, nunca la tuya.

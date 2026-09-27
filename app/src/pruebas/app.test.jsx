@@ -185,12 +185,62 @@ describe("con sesión", () => {
     render(<App />);
     await userEvent.click(await screen.findByRole("tab", { name: /listas/i }));
 
-    const tarjeta = screen.getByText("Café").closest(".tarjeta");
-    await userEvent.click(within(tarjeta).getByRole("button", { name: "Comprado" }));
+    const casilla = screen.getByRole("checkbox", { name: "Café: comprado" });
+    expect(casilla).toHaveAttribute("aria-checked", "false");
+    await userEvent.click(casilla);
 
     await waitFor(() => expect(screen.getByText("Café").closest(".tarjeta")).toHaveClass("tarjeta--hecha"));
+    expect(screen.getByRole("checkbox", { name: "Café: comprado" })).toHaveAttribute("aria-checked", "true");
     const put = fetch.mock.calls.find(([, o]) => o?.method === "PUT");
     expect(JSON.parse(put[1].body)).toEqual({ estado: "terminado" });
+  });
+
+  it("una tarea nueva no sale hecha: su casilla está vacía hasta que se marca", async () => {
+    guardarSesion({ url: API, token: "p" });
+    const fetch = apiFalsa();
+    render(<App />);
+    await userEvent.click(await screen.findByRole("tab", { name: /listas/i }));
+
+    await userEvent.click(document.querySelector(".flotante"));
+    const formulario = within(screen.getByRole("dialog"));
+    // Una tarea nueva siempre empieza por hacer: el formulario ni pregunta el estado.
+    expect(formulario.queryByLabelText("Estado")).not.toBeInTheDocument();
+    await userEvent.type(formulario.getByLabelText("¿Qué es?"), "Lavar el carro");
+    await userEvent.click(formulario.getByRole("button", { name: "Agregar" }));
+
+    const casilla = await screen.findByRole("checkbox", { name: "Lavar el carro: hecha" });
+    expect(casilla).toHaveAttribute("aria-checked", "false");
+    expect(casilla.closest(".tarjeta")).not.toHaveClass("tarjeta--hecha");
+    const post = fetch.mock.calls.find(([, o]) => o?.method === "POST");
+    expect(JSON.parse(post[1].body)).toMatchObject({ tipo: "tarea", estado: "pendiente" });
+
+    // Se marca, se tacha; se desmarca, vuelve a estar por hacer.
+    await userEvent.click(casilla);
+    await waitFor(() => expect(screen.getByText("Lavar el carro").closest(".tarjeta")).toHaveClass("tarjeta--hecha"));
+    await userEvent.click(screen.getByRole("checkbox", { name: "Lavar el carro: hecha" }));
+    await waitFor(() =>
+      expect(screen.getByRole("checkbox", { name: "Lavar el carro: hecha" })).toHaveAttribute("aria-checked", "false")
+    );
+    expect(screen.getByText("Lavar el carro").closest(".tarjeta")).not.toHaveClass("tarjeta--hecha");
+  });
+
+  it("para un libro sí pide el estado, y al pasar a tarea se limpia lo que no aplica", async () => {
+    guardarSesion({ url: API, token: "p" });
+    const fetch = apiFalsa();
+    render(<App />);
+    await userEvent.click(await screen.findByRole("tab", { name: /listas/i }));
+    await userEvent.click(document.querySelector(".flotante"));
+    const formulario = within(screen.getByRole("dialog"));
+
+    await userEvent.selectOptions(formulario.getByLabelText("Tipo"), "libro");
+    await userEvent.selectOptions(formulario.getByLabelText("Estado"), "en_curso");
+    await userEvent.selectOptions(formulario.getByLabelText("Tipo"), "tarea");
+    await userEvent.type(formulario.getByLabelText("¿Qué es?"), "Leer las instrucciones");
+    await userEvent.click(formulario.getByRole("button", { name: "Agregar" }));
+
+    await screen.findByRole("checkbox", { name: "Leer las instrucciones: hecha" });
+    const post = fetch.mock.calls.find(([, o]) => o?.method === "POST");
+    expect(JSON.parse(post[1].body)).toMatchObject({ tipo: "tarea", estado: "pendiente" });
   });
 
   it("escribir una página la agrega y el libro la muestra primero", async () => {
