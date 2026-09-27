@@ -4,6 +4,8 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   base: "./",
+  // Cuándo se compiló: Ajustes lo muestra, para saber qué versión se tiene abierta.
+  define: { __VERSION__: JSON.stringify(new Date().toISOString()) },
   server: { port: 5173, open: false },
   test: {
     environment: "jsdom",

@@ -105,7 +105,7 @@ demo.sh                 guion de la demo en vivo
 pruebas_e2e.py          16 verificaciones contra la API desplegada
 tests/                  75 pruebas con pytest + moto
 servidor_local.py       la Lambda real contra AWS emulado, en localhost:8787
-app/                    aplicación React + Vite (PWA instalable), 84 pruebas con vitest
+app/                    aplicación React + Vite (PWA instalable), 91 pruebas con vitest
 frontend/index.html     la misma idea en un archivo, sin dependencias
 DESPLIEGUE.md           paso a paso en la consola de AWS
 PLAN-proyecto-final-modulo3.md   el plan contra la rúbrica
@@ -115,7 +115,7 @@ PLAN-proyecto-final-modulo3.md   el plan contra la rúbrica
 
 ```bash
 python -m pytest tests -q                 # 75 pruebas de la Lambda
-cd app && npm test                        # 84 pruebas de la app
+cd app && npm test                        # 91 pruebas de la app
 python servidor_local.py                  # API local sin AWS, clave "local"
 python pruebas_e2e.py <URL_API> <CLAVE>   # 19 verificaciones contra la API real
 python cargar_datos.py <URL_API> <CLAVE>  # carga los 10 registros de ejemplo
@@ -169,10 +169,17 @@ retención de logs distinta de "nunca vence".
   había que pasar muchas hojas para leer un solo día.)
 - **Las hojas van por su fecha**, no por cuándo se escribieron: una página del día 20 escrita
   hoy queda entre las del 20. Al guardarla, el libro se abre en ella (`ordenarPaginas`, `Libro`).
-- **Cada fondo tiene versión de día y de noche** (`--pagina-fondo` y `--pagina-fondo-oscuro`
-  en `styles.css`). Con el teléfono en oscuro la hoja se vuelve de noche, no se queda blanca.
-- **El tema se guarda en `catalogo.apariencia`.** La primera versión guardaba `catalogo.tema`
-  sola en cada visita y eso impedía seguir al teléfono; la app borra esa llave al abrir.
+- **Las hojas conservan siempre su color** en cualquier tema: el cuaderno es blanco y la rosa
+  es rosa. Se probó darles versión de noche y al dueño no le gustó: no se distinguían.
+  `color-scheme: only light` en la raíz y en `.pagina` evita que el navegador las oscurezca por
+  su cuenta. Chrome y Samsung Internet lo hacen si nadie se lo impide y las dejan casi negras.
+- **La app arranca en claro** aunque el teléfono esté en oscuro. Oscuro y "según el teléfono"
+  se eligen en Ajustes, y solo entonces se guarda el tema (`catalogo.tema-elegido`). Las
+  versiones anteriores lo guardaban solas en cada visita (`catalogo.tema`, `catalogo.apariencia`),
+  y ese valor impedía cambiarlo; la app borra esas llaves al abrir.
+- **La app se actualiza sola.** Al volver a ella o al tocar Actualizar, si Pages ya tiene otra
+  compilación, recarga, salvo con algo a medio escribir (`version.js`). Ajustes muestra de
+  cuándo es la versión abierta.
 - **Estilo del código y de la interfaz en español**, igual que el resto del proyecto.
 
 ---
@@ -190,7 +197,7 @@ workflow de `.github/workflows/pages.yml` y actualiza GitHub Pages.
 | Quiero… | Dónde se toca |
 |---|---|
 | Agregar un tipo (por ejemplo `podcast`) | `TIPOS_VALIDOS` en `lambda_function.py`, y `TIPOS` + `ETIQUETAS` + `ICONOS` + `CAMPO_EXTRA` en `app/src/api.js`. Luego pegar la Lambda en la consola. |
-| Agregar un fondo de página | `FONDOS_VALIDOS` en la Lambda, `FONDOS` en `app/src/api.js` y una clase `.fondo-<id>` en `styles.css` con su versión de día y de noche (`--pagina-fondo`, `--pagina-fondo-oscuro` y, si cambia la tinta, `--tinta-oscura`). |
+| Agregar un fondo de página | `FONDOS_VALIDOS` en la Lambda, `FONDOS` en `app/src/api.js` y una clase `.fondo-<id>` en `styles.css` (`--pagina-fondo` y, si hace falta, `--tinta`). |
 | Cambiar el nombre de la sección Listas | la constante `NOMBRE_LISTAS` en `app/src/App.jsx`. |
 | Cambiar el nombre del dueño | la constante `DUENO` en `app/src/api.js` (sale en la invitación y en el acceso). |
 | Cambiar el texto de la invitación | `mensajeInvitacion()` en `app/src/acceso.jsx`. |

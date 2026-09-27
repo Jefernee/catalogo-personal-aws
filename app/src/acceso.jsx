@@ -2,6 +2,7 @@ import { useState } from "react";
 import { DUENO, ErrorApi, api, guardarSesion, hoyIso, leerToken, leerUrl } from "./api";
 import { useMedia } from "./diario";
 import { Hoja } from "./hoja";
+import { fechaDeVersion } from "./version";
 import { Candado, Compartir, Copiar, Descargar, Luna, Nube, Sol, WhatsApp } from "./iconos";
 
 /** La dirección de la página, sin nada después del "#": es la que se comparte. */
@@ -231,8 +232,8 @@ export function descargarCopia(items) {
 
 /** Ajustes: tema, copia de seguridad y seguridad. */
 const TEMAS = [
-  { id: "sistema", nombre: "Según el teléfono" },
   { id: "claro", nombre: "Claro" },
+  { id: "sistema", nombre: "Según el teléfono" },
   { id: "oscuro", nombre: "Oscuro" },
 ];
 
@@ -242,6 +243,9 @@ export function ModalAjustes({ alCerrar, alSalir, tema, alElegirTema, items, alR
     <Hoja titulo="Ajustes" alCerrar={alCerrar} clase="hoja--ajustes">
       <section className="ajuste">
         <h3>Apariencia</h3>
+        <p className="ayuda-ajuste">
+          Cambia el fondo de la app. Las hojas del diario conservan siempre su color.
+        </p>
         <div className="segmentado" role="radiogroup" aria-label="Tema">
           {TEMAS.map((t) => (
             <button
@@ -259,7 +263,9 @@ export function ModalAjustes({ alCerrar, alSalir, tema, alElegirTema, items, alR
         <p className="nota-ajuste" aria-live="polite">
           {tema === "sistema"
             ? `Tu teléfono está en modo ${telefonoOscuro ? "oscuro" : "claro"}, y la app también.`
-            : `Siempre en ${tema}, aunque cambies el modo del teléfono.`}
+            : tema === "claro"
+              ? "Siempre en claro, aunque el teléfono esté en oscuro."
+              : "Siempre en oscuro, aunque el teléfono esté en claro."}
         </p>
       </section>
 
@@ -298,6 +304,8 @@ export function ModalAjustes({ alCerrar, alSalir, tema, alElegirTema, items, alR
           <Candado width={16} height={16} /> Bloquear ahora
         </button>
       </section>
+
+      <p className="nota-ajuste version-app">Mi diario · versión {fechaDeVersion()}</p>
     </Hoja>
   );
 }

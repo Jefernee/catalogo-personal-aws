@@ -12,6 +12,7 @@ import {
 import { ModalAjustes, ModalCompartir, PantallaAcceso } from "./acceso";
 import { Filtros, Metricas, ModalItem, Tarjeta } from "./componentes";
 import { EditorPagina, Libro } from "./diario";
+import { debeActualizarse } from "./version";
 import { Alerta, Candado, Check, Compartir, Engrane, Mas, Recargar } from "./iconos";
 
 // Nombre de la sección de tareas, compras, libros y demás. Cambiarlo aquí basta.
@@ -39,8 +40,17 @@ const olvidar = (llave) => {
   }
 };
 
-/** Dónde se guarda el tema elegido en Ajustes. */
-export const LLAVE_TEMA = "catalogo.apariencia";
+/** Dónde se guarda el tema, y solo cuando se elige en Ajustes. */
+export const LLAVE_TEMA = "catalogo.tema-elegido";
+/** Las versiones anteriores guardaban un tema solas, en cada visita, sin que nadie lo eligiera. */
+const TEMAS_GUARDADOS_SOLOS = ["catalogo.tema", "catalogo.apariencia"];
+
+/** La barra del navegador (arriba, en el celular) toma el color del fondo de la app. */
+function pintarBarra() {
+  const meta = document.querySelector('meta[name="theme-color"]');
+  const fondo = getComputedStyle(document.documentElement).getPropertyValue("--fondo").trim();
+  if (meta && fondo) meta.setAttribute("content", fondo);
+}
 
 export default function App() {
   const [conSesion, setConSesion] = useState(() => Boolean(leerUrl() && leerToken()));
@@ -51,20 +61,27 @@ export default function App() {
   const [brindis, setBrindis] = useState(null);
   const [modal, setModal] = useState(null); // { tipo: "item" | "pagina" | "ajustes", item? }
   const [filtros, setFiltros] = useState({ tipo: "", estado: "", busqueda: "" });
-  // "sistema" sigue al teléfono: si está en oscuro, la app también. La primera
-  // versión guardaba "claro" u "oscuro" sola en cada visita, en otra llave; ese
-  // valor no lo eligió nadie y dejaba la app sin seguir al teléfono: se descarta.
+  // La app arranca en claro, como se diseñó, aunque el teléfono esté en
+  // oscuro. Oscuro y "según el teléfono" se eligen en Ajustes, y solo entonces
+  // se guarda el tema. Lo que las versiones anteriores guardaron solas se borra.
   const [tema, setTema] = useState(() => {
-    olvidar("catalogo.tema");
-    return recordado(LLAVE_TEMA, "sistema");
+    TEMAS_GUARDADOS_SOLOS.forEach(olvidar);
+    return recordado(LLAVE_TEMA, "claro");
   });
+  const elegirTema = (elegido) => {
+    setTema(elegido);
+    recordar(LLAVE_TEMA, elegido);
+  };
 
   // El tema vive en el atributo data-tema del <html>; el CSS hace el resto.
-  // Sin atributo, manda prefers-color-scheme: lo que tenga el sistema.
+  // Con "sistema", el CSS sigue a prefers-color-scheme por su cuenta.
   useEffect(() => {
-    if (tema === "sistema") delete document.documentElement.dataset.tema;
-    else document.documentElement.dataset.tema = tema;
-    recordar(LLAVE_TEMA, tema);
+    document.documentElement.dataset.tema = tema;
+    pintarBarra();
+    if (tema !== "sistema") return undefined;
+    const telefono = window.matchMedia?.("(prefers-color-scheme: dark)");
+    telefono?.addEventListener?.("change", pintarBarra);
+    return () => telefono?.removeEventListener?.("change", pintarBarra);
   }, [tema]);
 
   useEffect(() => recordar("catalogo.pestana", pestana), [pestana]);
@@ -137,6 +154,19 @@ export default function App() {
     document.addEventListener("visibilitychange", alCambiarVisibilidad);
     return () => document.removeEventListener("visibilitychange", alCambiarVisibilidad);
   }, [conSesion, expulsar]);
+
+  // Una app instalada puede pasar días sin recargarse. Al volver a ella, si ya
+  // se publicó una versión nueva, se recarga sola, salvo que haya algo a medio
+  // escribir: eso nunca se pierde.
+  useEffect(() => {
+    const alVolver = async () => {
+      if (document.visibilityState !== "visible") return;
+      if (modalRef.current || pendiente.current) return;
+      if (await debeActualizarse()) window.location.reload();
+    };
+    document.addEventListener("visibilitychange", alVolver);
+    return () => document.removeEventListener("visibilitychange", alVolver);
+  }, []);
 
   // Abrir un enlace de acceso con la app ya abierta en esa pestaña no recarga
   // la página: solo cambia lo que va después del "#". Se escucha ese cambio.
@@ -277,7 +307,11 @@ export default function App() {
           <button
             type="button"
             className="btn btn--sutil btn--icono"
-            onClick={cargar}
+            onClick={async () => {
+              // Si ya se publicó una versión nueva de la app, se trae; si no, solo los datos.
+              if (await debeActualizarse()) window.location.reload();
+              else cargar();
+            }}
             title="Actualizar"
             aria-label="Actualizar"
             disabled={cargando}
@@ -425,7 +459,7 @@ export default function App() {
           alCerrar={() => setModal(null)}
           alSalir={() => expulsar("Bloqueado. Escribe la contraseña para entrar.")}
           tema={tema}
-          alElegirTema={setTema}
+          alElegirTema={elegirTema}
           items={items}
           alRespaldarEnNube={respaldarEnNube}
           avisar={avisar}

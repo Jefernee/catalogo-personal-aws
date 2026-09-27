@@ -1,8 +1,9 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import App from "../App";
+import App, { LLAVE_TEMA } from "../App";
 import { guardarSesion, leerToken } from "../api";
+import { simularPantalla } from "./pantalla";
 
 const API = "https://abc123.execute-api.us-east-1.amazonaws.com";
 
@@ -247,12 +248,24 @@ describe("con sesión", () => {
 });
 
 describe("tema", () => {
-  it("por defecto sigue al teléfono: no fija ningún tema", async () => {
+  it("arranca en claro aunque el teléfono esté en oscuro, y no guarda nada por su cuenta", async () => {
+    simularPantalla({ oscuro: true });
     guardarSesion({ url: API, token: "p" });
     apiFalsa();
     render(<App />);
     await screen.findByText("Un domingo");
-    expect(document.documentElement.dataset.tema).toBeUndefined();
+    expect(document.documentElement.dataset.tema).toBe("claro");
+    expect(localStorage.getItem(LLAVE_TEMA)).toBeNull();
+  });
+
+  it("según el teléfono queda elegido, y se recuerda", async () => {
+    guardarSesion({ url: API, token: "p" });
+    apiFalsa();
+    render(<App />);
+    await userEvent.click(await screen.findByRole("button", { name: "Ajustes" }));
+    await userEvent.click(screen.getByRole("radio", { name: /según el teléfono/i }));
+    expect(document.documentElement.dataset.tema).toBe("sistema");
+    expect(localStorage.getItem(LLAVE_TEMA)).toBe("sistema");
   });
 
   it("desde Ajustes se puede fijar el oscuro, y queda guardado", async () => {
@@ -262,17 +275,19 @@ describe("tema", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Ajustes" }));
     await userEvent.click(screen.getByRole("radio", { name: /oscuro/i }));
     expect(document.documentElement.dataset.tema).toBe("oscuro");
-    expect(localStorage.getItem("catalogo.apariencia")).toBe("oscuro");
+    expect(localStorage.getItem(LLAVE_TEMA)).toBe("oscuro");
   });
 
-  it("el tema que guardaba sola la primera versión ya no impide seguir al teléfono", async () => {
-    // La primera versión guardaba "claro" u "oscuro" en cada visita, lo eligiera uno o no.
+  it("lo que las versiones anteriores guardaban solas ya no manda: vuelve a claro", async () => {
+    // Guardaban el tema en cada visita, lo eligiera uno o no.
     localStorage.setItem("catalogo.tema", "oscuro");
+    localStorage.setItem("catalogo.apariencia", "sistema");
     guardarSesion({ url: API, token: "p" });
     apiFalsa();
     render(<App />);
     await screen.findByText("Un domingo");
-    expect(document.documentElement.dataset.tema).toBeUndefined();
+    expect(document.documentElement.dataset.tema).toBe("claro");
     expect(localStorage.getItem("catalogo.tema")).toBeNull();
+    expect(localStorage.getItem("catalogo.apariencia")).toBeNull();
   });
 });

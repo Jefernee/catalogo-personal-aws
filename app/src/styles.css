@@ -1,9 +1,14 @@
 /* ==========================================================================
    Tokens
+   La app arranca en claro aunque el teléfono esté en oscuro: así se ve como
+   se diseñó. En Ajustes se puede elegir oscuro o "según el teléfono".
+   "only light" le pide al navegador que no la oscurezca por su cuenta:
+   Chrome y Samsung Internet lo hacen si nadie se lo impide, y dejan las
+   hojas casi negras.
    ========================================================================== */
 
 :root {
-  color-scheme: light;
+  color-scheme: only light;
 
   --fondo: #eef1fb;
   --superficie: #ffffff;
@@ -60,10 +65,10 @@
   --muestra-borde: rgba(0, 0, 0, 0.14);
 }
 
-/* Paleta oscura: cuando el sistema está en oscuro y el usuario no pidió
-   claro, o cuando la elige a mano desde Ajustes. */
+/* Paleta oscura: elegida en Ajustes, o "según el teléfono" con el teléfono
+   en oscuro. Cambia lo de alrededor; las hojas conservan su color. */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-tema="claro"]) {
+  :root[data-tema="sistema"] {
     color-scheme: dark;
     --fondo: #101322;
     --superficie: #1a1e33;
@@ -88,19 +93,14 @@
     --sombra-1: 0 1px 2px rgba(0, 0, 0, 0.4), 0 2px 10px rgba(0, 0, 0, 0.3);
     --sombra-2: 0 2px 8px rgba(0, 0, 0, 0.45), 0 12px 28px rgba(0, 0, 0, 0.4);
     --sombra-3: 0 14px 44px rgba(0, 0, 0, 0.6);
-    /* De noche el papel también es de noche: cantos y sombras oscuros, y cada
-       fondo toma su versión oscura (ver "Fondos de página"). */
-    --papel-canto: #0b0c15;
-    --papel-canto-2: #08090f;
-    --papel-hoja: #2b2b33;
+    /* Las hojas siguen siendo de papel claro, como un cuaderno sobre una mesa
+       oscura: solo cambian sus cantos y la sombra que dejan. */
+    --papel-canto: #cfc8ba;
+    --papel-canto-2: #b8b0a0;
+    --papel-hoja: #f3efe6;
     --sombra-pagina: rgba(0, 0, 0, 0.5);
-    --sombra-lomo: rgba(0, 0, 0, 0.55);
     --sombra-libro: rgba(0, 0, 0, 0.45);
-    --portada-hojas: #4a4539;
-    --portada-hojas-2: #3a362d;
-    --renglon-color: rgba(135, 160, 235, 0.2);
-    --pagina-realce: rgba(255, 255, 255, 0.08);
-    --muestra-borde: rgba(255, 255, 255, 0.2);
+    --muestra-borde: rgba(255, 255, 255, 0.3);
   }
 }
 
@@ -129,23 +129,15 @@
   --sombra-1: 0 1px 2px rgba(0, 0, 0, 0.4), 0 2px 10px rgba(0, 0, 0, 0.3);
   --sombra-2: 0 2px 8px rgba(0, 0, 0, 0.45), 0 12px 28px rgba(0, 0, 0, 0.4);
   --sombra-3: 0 14px 44px rgba(0, 0, 0, 0.6);
-  /* De noche el papel también es de noche: cantos y sombras oscuros, y cada
-     fondo toma su versión oscura (ver "Fondos de página"). */
-  --papel-canto: #0b0c15;
-  --papel-canto-2: #08090f;
-  --papel-hoja: #2b2b33;
+  /* Las hojas siguen siendo de papel claro, como un cuaderno sobre una mesa
+     oscura: solo cambian sus cantos y la sombra que dejan. */
+  --papel-canto: #cfc8ba;
+  --papel-canto-2: #b8b0a0;
+  --papel-hoja: #f3efe6;
   --sombra-pagina: rgba(0, 0, 0, 0.5);
-  --sombra-lomo: rgba(0, 0, 0, 0.55);
   --sombra-libro: rgba(0, 0, 0, 0.45);
-  --portada-hojas: #4a4539;
-  --portada-hojas-2: #3a362d;
-  --renglon-color: rgba(135, 160, 235, 0.2);
-  --pagina-realce: rgba(255, 255, 255, 0.08);
-  --muestra-borde: rgba(255, 255, 255, 0.2);
+  --muestra-borde: rgba(255, 255, 255, 0.3);
 }
-
-/* Claro elegido a mano: el navegador no debe oscurecer la página por su cuenta. */
-:root[data-tema="claro"] { color-scheme: only light; }
 
 /* ==========================================================================
    Base
@@ -537,6 +529,8 @@ a { color: var(--acento); }
 
 .pagina {
   --pagina-fondo: #fffdf8;
+  /* Papel en cualquier modo: ni el tema oscuro ni el navegador la oscurecen. */
+  color-scheme: only light;
   position: relative;
   min-height: 560px;
   padding: 34px 38px 54px;
@@ -683,34 +677,22 @@ a { color: var(--acento); }
 
 /* ==========================================================================
    Fondos de página
-   Cada fondo tiene su versión de día y su versión de noche (las variables que
-   terminan en -oscuro u -oscura). Con el teléfono en oscuro, la hoja se vuelve
-   de noche en lugar de quedarse blanca y encandilar.
+   Cada hoja conserva su color en cualquier modo: el cuaderno siempre es
+   blanco y la rosa siempre rosa, así se distinguen de un vistazo.
    ========================================================================== */
 
 .fondo-papel {
   --pagina-fondo: radial-gradient(130% 110% at 50% 40%, #fffefa 0%, #fbf6ea 100%);
-  /* Grafito cálido, como papel bajo una lámpara. */
-  --pagina-fondo-oscuro: radial-gradient(120% 90% at 50% 25%, #302d2b 0%, #252321 60%, #1f1d1b 100%);
 }
 .fondo-crema {
   --pagina-fondo: radial-gradient(130% 110% at 50% 35%, #fcf5e4 0%, #f1e4c6 100%);
   --tinta: #33291c;
-  --pagina-fondo-oscuro: radial-gradient(120% 90% at 50% 25%, #3b3226 0%, #2e271e 60%, #262019 100%);
-  --tinta-oscura: #f1e5ce;
-  --tinta-suave-oscura: #b9a684;
 }
 .fondo-rayado {
   --pagina-fondo:
     linear-gradient(90deg, transparent 50px, rgba(214, 72, 72, 0.4) 50px 51.5px, transparent 51.5px),
     #fdfdfb;
   --muestra-fondo: repeating-linear-gradient(to bottom, #fdfdfb 0 7px, rgba(66, 110, 200, 0.4) 7px 8px);
-  --pagina-fondo-oscuro:
-    linear-gradient(90deg, transparent 50px, rgba(240, 115, 115, 0.45) 50px 51.5px, transparent 51.5px),
-    #202229;
-  --muestra-fondo-oscuro: repeating-linear-gradient(to bottom, #202229 0 7px, rgba(135, 160, 235, 0.55) 7px 8px);
-  --tinta-oscura: #e8eaf2;
-  --tinta-suave-oscura: #9ea3b8;
 }
 .fondo-rayado .pagina-cuerpo,
 .fondo-rayado textarea.pagina-texto {
@@ -728,81 +710,35 @@ a { color: var(--acento); }
     linear-gradient(rgba(62, 100, 180, 0.11) 1px, transparent 1px) 0 0 / 22px 22px,
     linear-gradient(90deg, rgba(62, 100, 180, 0.11) 1px, transparent 1px) 0 0 / 22px 22px,
     #fcfdff;
-  --pagina-fondo-oscuro:
-    linear-gradient(rgba(135, 160, 235, 0.12) 1px, transparent 1px) 0 0 / 22px 22px,
-    linear-gradient(90deg, rgba(135, 160, 235, 0.12) 1px, transparent 1px) 0 0 / 22px 22px,
-    #1f2129;
-  --tinta-oscura: #e8eaf2;
-  --tinta-suave-oscura: #9ea3b8;
 }
 .fondo-lino {
   --pagina-fondo:
     repeating-linear-gradient(0deg, rgba(120, 100, 70, 0.06) 0 1px, transparent 1px 3px),
     repeating-linear-gradient(90deg, rgba(120, 100, 70, 0.06) 0 1px, transparent 1px 3px),
     #f3eee4;
-  --pagina-fondo-oscuro:
-    repeating-linear-gradient(0deg, rgba(255, 235, 205, 0.022) 0 1px, transparent 1px 3px),
-    repeating-linear-gradient(90deg, rgba(255, 235, 205, 0.022) 0 1px, transparent 1px 3px),
-    #2a2621;
 }
-.fondo-rosa {
-  --pagina-fondo: linear-gradient(165deg, #fff4f6 0%, #fbe1e8 100%);
-  --tinta: #3b2229; --tinta-suave: #946572;
-  --pagina-fondo-oscuro: linear-gradient(165deg, #37232c 0%, #2a1a22 100%);
-  --tinta-oscura: #f9e6ed; --tinta-suave-oscura: #cb9cac;
-}
-.fondo-menta {
-  --pagina-fondo: linear-gradient(165deg, #f1fbf6 0%, #d9f0e4 100%);
-  --tinta: #1f3129; --tinta-suave: #5f8474;
-  --pagina-fondo-oscuro: linear-gradient(165deg, #1c3029 0%, #15251f 100%);
-  --tinta-oscura: #e0f4eb; --tinta-suave-oscura: #8eb9a6;
-}
+.fondo-rosa { --pagina-fondo: linear-gradient(165deg, #fff4f6 0%, #fbe1e8 100%); --tinta: #3b2229; --tinta-suave: #946572; }
+.fondo-menta { --pagina-fondo: linear-gradient(165deg, #f1fbf6 0%, #d9f0e4 100%); --tinta: #1f3129; --tinta-suave: #5f8474; }
 .fondo-cielo {
   --pagina-fondo:
     radial-gradient(60% 40% at 80% 12%, rgba(255, 255, 255, 0.85), transparent 70%),
     linear-gradient(175deg, #eef6ff 0%, #d9e7fb 100%);
   --tinta: #1d2a40; --tinta-suave: #607494;
-  --pagina-fondo-oscuro:
-    radial-gradient(60% 40% at 80% 12%, rgba(160, 195, 255, 0.12), transparent 70%),
-    linear-gradient(175deg, #1c2943 0%, #162036 100%);
-  --tinta-oscura: #e4edfc; --tinta-suave-oscura: #97abce;
 }
-.fondo-lavanda {
-  --pagina-fondo: linear-gradient(165deg, #f7f2ff 0%, #e6ddfa 100%);
-  --tinta: #2c2441; --tinta-suave: #7a6e98;
-  --pagina-fondo-oscuro: linear-gradient(165deg, #2c2543 0%, #221c37 100%);
-  --tinta-oscura: #eee7fd; --tinta-suave-oscura: #ab9fd0;
-}
-/* La noche ya es oscura: es la misma de día y de noche. */
+.fondo-lavanda { --pagina-fondo: linear-gradient(165deg, #f7f2ff 0%, #e6ddfa 100%); --tinta: #2c2441; --tinta-suave: #7a6e98; }
+/* La noche es la única hoja oscura: sus controles (la fecha del editor) van en oscuro. */
 .fondo-noche {
-  --cielo-estrellado:
+  color-scheme: dark;
+  --pagina-fondo:
     radial-gradient(1.2px 1.2px at 12% 18%, rgba(255, 255, 255, 0.8), transparent 60%),
     radial-gradient(1px 1px at 78% 12%, rgba(255, 255, 255, 0.7), transparent 60%),
     radial-gradient(1.4px 1.4px at 88% 42%, rgba(255, 255, 255, 0.55), transparent 60%),
     radial-gradient(1px 1px at 30% 70%, rgba(255, 255, 255, 0.5), transparent 60%),
     radial-gradient(1.2px 1.2px at 62% 86%, rgba(255, 255, 255, 0.6), transparent 60%),
     radial-gradient(120% 90% at 50% 0%, #2a3160, #171b33 70%);
-  --pagina-fondo: var(--cielo-estrellado);
-  --pagina-fondo-oscuro: var(--cielo-estrellado);
-  --tinta: #ecedf8; --tinta-suave: #9ea5cc;
-  --tinta-oscura: #ecedf8; --tinta-suave-oscura: #9ea5cc;
+  --tinta: #ecedf8;
+  --tinta-suave: #9ea5cc;
   --pagina-realce: rgba(255, 255, 255, 0.1);
-}
-
-/* De noche, cada hoja y cada muestra toman la versión oscura de su fondo. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-tema="claro"]) :is(.pagina, .muestra) {
-    --pagina-fondo: var(--pagina-fondo-oscuro, #24232a);
-    --muestra-fondo: var(--muestra-fondo-oscuro, var(--pagina-fondo-oscuro, #24232a));
-    --tinta: var(--tinta-oscura, #eee8df);
-    --tinta-suave: var(--tinta-suave-oscura, #a9a197);
-  }
-}
-:root[data-tema="oscuro"] :is(.pagina, .muestra) {
-  --pagina-fondo: var(--pagina-fondo-oscuro, #24232a);
-  --muestra-fondo: var(--muestra-fondo-oscuro, var(--pagina-fondo-oscuro, #24232a));
-  --tinta: var(--tinta-oscura, #eee8df);
-  --tinta-suave: var(--tinta-suave-oscura, #a9a197);
 }
 
 /* ==========================================================================
@@ -921,6 +857,7 @@ a { color: var(--acento); }
   border-radius: 50%;
   background: var(--muestra-fondo, var(--pagina-fondo));
   border: 1px solid var(--muestra-borde);
+  color-scheme: only light;
   cursor: pointer;
   transition: transform .14s, box-shadow .14s;
 }
@@ -964,7 +901,6 @@ a { color: var(--acento); }
 }
 .pagina--editor input:focus-visible,
 .pagina--editor textarea:focus-visible { box-shadow: none; }
-.fondo-noche.pagina--editor .pagina-fecha { color-scheme: dark; }
 
 @media (max-width: 639px) {
   .pagina--editor { min-height: calc(var(--alto-visible, 100dvh) - 190px); padding: 22px 20px 36px; }
@@ -977,6 +913,7 @@ a { color: var(--acento); }
 .ajuste h3 { margin: 0 0 6px; font-size: 14.5px; font-weight: 650; }
 .ayuda-ajuste { margin: 0 0 12px; color: var(--suave); font-size: 13.5px; }
 .nota-ajuste { margin: 10px 0 0; color: var(--tenue); font-size: 12.5px; line-height: 1.5; }
+.version-app { margin-top: 26px; text-align: center; }
 .fila-botones { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .fila-botones .campo-en-linea { flex: 1 1 180px; width: auto; }
 .enlace-compartir {
@@ -1150,7 +1087,7 @@ code {
 }
 :root[data-tema="oscuro"] .burbuja { background: #1f4a31; color: #e9f5ec; }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-tema="claro"]) .burbuja { background: #1f4a31; color: #e9f5ec; }
+  :root[data-tema="sistema"] .burbuja { background: #1f4a31; color: #e9f5ec; }
 }
 
 

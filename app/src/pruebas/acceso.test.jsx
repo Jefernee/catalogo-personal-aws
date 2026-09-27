@@ -138,6 +138,8 @@ describe("ajustes: apariencia", () => {
 
   it("con un tema fijo, avisa que no cambia con el teléfono", () => {
     ajustes("claro");
-    expect(screen.getByText(/Siempre en claro, aunque cambies el modo del teléfono/)).toBeInTheDocument();
+    expect(screen.getByText(/Siempre en claro, aunque el teléfono esté en oscuro/)).toBeInTheDocument();
+    // Y deja claro que las hojas no cambian con el tema.
+    expect(screen.getByText(/Las hojas del diario conservan siempre su color/)).toBeInTheDocument();
   });
 });

@@ -59,7 +59,7 @@ URL no viaja dentro del build publicado.
 ## Pruebas
 
 ```bash
-npm test           # 84 pruebas con vitest: sesión, enlaces, invitación, libro, app completa
+npm test           # 91 pruebas con vitest: sesión, enlaces, invitación, libro, versión, app completa
 ```
 
 Para probarla contra la Lambda real sin tocar AWS, desde la raíz del proyecto:
@@ -88,14 +88,15 @@ npm run preview    # sirve dist/ para revisarlo
 - **Diario como libro.** Una hoja por día, ordenadas por su fecha: la más reciente primero.
   En escritorio se ven dos hojas abiertas y en el celular una, que se pasa deslizando el dedo.
   Una nota larga no se parte: la hoja crece y se lee bajando. Cada página tiene su fondo:
-  papel, crema, rayado, cuadrícula, lino, rosa, menta, cielo, lavanda o noche, cada uno con
-  su versión de noche para el modo oscuro. El editor escribe directamente sobre la hoja elegida.
+  papel, crema, rayado, cuadrícula, lino, rosa, menta, cielo, lavanda o noche. Las hojas
+  conservan su color en cualquier tema. El editor escribe directamente sobre la hoja elegida.
 - **Listas.** Tareas y compras (se tachan al marcarlas hechas o compradas) y lo que se lee,
   ve o escucha, con estado y estrellas. Búsqueda y filtros por tipo y estado.
 - **Compartir.** Arma una invitación para WhatsApp —qué es el diario, cómo entrar paso a paso
   y los datos de acceso— y deja elegir el contacto. Lleva la clave de invitado, nunca la tuya.
-- **Ajustes.** Tema según el teléfono, claro u oscuro; descargar una copia de todo en JSON o
-  guardarla en S3; cerrar sesión en el dispositivo.
+- **Ajustes.** Tema claro (el de siempre), oscuro o según el teléfono; descargar una copia de
+  todo en JSON o guardarla en S3; bloquear el dispositivo; de cuándo es la versión abierta.
+- **Se actualiza sola.** Al volver a la app, si ya hay una versión nueva publicada, recarga.
 - **Pensada para el celular.** Los formularios ocupan la pantalla con el botón de guardar
   arriba, y se ajustan al teclado para que nunca lo tape. Instalable como app.
 

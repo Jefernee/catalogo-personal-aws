@@ -3,10 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
-    <!-- La app trae su propio modo claro y oscuro: el navegador no debe oscurecerla por su cuenta. -->
-    <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#eef1fb" />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#101322" />
+    <!-- La app se ve en claro aunque el teléfono esté en oscuro (el oscuro se elige en Ajustes),
+         y el navegador no debe oscurecerla por su cuenta: dejaría las hojas casi negras. -->
+    <meta name="color-scheme" content="only light" />
+    <meta name="theme-color" content="#eef1fb" />
+    <script>
+      // El tema elegido en Ajustes, antes de pintar: así no hay un destello del otro.
+      try {
+        document.documentElement.dataset.tema = localStorage.getItem("catalogo.tema-elegido") || "claro";
+      } catch (e) {}
+    </script>
     <meta name="description" content="Mi diario personal, con listas de tareas, compras y lo que voy viendo." />
     <link rel="icon" href="./icono.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./icono-192.png" />
