@@ -46,8 +46,18 @@ Los roles IAM con mínimo privilegio no son una capa aparte del diagrama: son un
 | `DELETE` | `/catalogo/{id}` | Elimina un ítem |
 | `POST` | `/export` | Exporta a S3 y devuelve la key del archivo. `?tipo=diario` para exportar el diario |
 
-**Valores de `tipo`:** `libro` · `pelicula` · `serie` · `musica` · `juego` · `restaurante` · `diario`
+**Valores de `tipo`:** `tarea` · `compra` · `libro` · `pelicula` · `serie` · `musica` · `juego` · `restaurante` · `diario`
 **Valores de `estado`:** `pendiente` · `en_curso` · `terminado` · `abandonado`
+
+---
+
+## Acceso
+
+Cada petición lleva una clave: `Authorization: Bearer <clave>`. Sin ella la API responde
+**401** — también en rutas que no existen. Hay dos claves, la del dueño y una de invitado que
+se puede revocar por separado, y si la Lambda no tiene la clave principal configurada responde
+**503** a todo: falla cerrada, nunca abierta. Las claves viven en variables de entorno de la
+Lambda, nunca en el código.
 
 ---
 
@@ -55,6 +65,7 @@ Los roles IAM con mínimo privilegio no son una capa aparte del diagrama: son un
 
 ```bash
 curl -X POST https://TU-ID.execute-api.us-east-1.amazonaws.com/catalogo \
+  -H "Authorization: Bearer $CATALOGO_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"tipo":"libro","titulo":"Piranesi","autor":"Susanna Clarke","estado":"pendiente"}'
 ```
@@ -109,7 +120,7 @@ pip install -r requirements-dev.txt
 python -m pytest tests -v
 ```
 
-49 pruebas contra **DynamoDB y S3 emulados** (moto): los 6 endpoints, las validaciones, los filtros, el contenido real del archivo en S3, el formato de respuesta que exige API Gateway y los caminos de error. No tocan AWS, no cuestan nada y corren en ~15 segundos.
+71 pruebas contra **DynamoDB y S3 emulados** (moto): el acceso con clave, los 6 endpoints, las validaciones, los filtros, el contenido real del archivo en S3, el formato de respuesta que exige API Gateway y los caminos de error. No tocan AWS, no cuestan nada y corren en ~15 segundos.
 
 Con la API ya desplegada, las pruebas de humo contra AWS de verdad:
 

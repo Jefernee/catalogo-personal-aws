@@ -11,7 +11,11 @@ import json
 import uuid
 from datetime import datetime, timezone
 
-from conftest import BUCKET_NAME, crear_item, llamar
+from conftest import (BUCKET_NAME, SIN_CLAVE, TOKEN_INVITADO, TOKEN_PRINCIPAL,
+                      crear_item, llamar)
+
+# Header de acceso para los eventos que se arman a mano.
+CON_CLAVE = {"authorization": f"Bearer {TOKEN_PRINCIPAL}"}
 
 
 # ==========================================================================
@@ -379,7 +383,9 @@ def test_funciona_con_el_stage_en_la_ruta(lf):
 
 def test_acepta_el_payload_v1_de_rest_api(lf):
     """Por si la API se crea como REST API en vez de HTTP API."""
+    # REST API conserva las mayusculas del header: tambien tiene que valer.
     evento = {"httpMethod": "GET", "path": "/catalogo",
+              "headers": {"Authorization": f"Bearer {TOKEN_PRINCIPAL}"},
               "queryStringParameters": None, "pathParameters": None, "body": None}
     respuesta = lf.lambda_handler(evento, None)
     assert respuesta["statusCode"] == 200
@@ -407,6 +413,7 @@ def test_body_en_base64_se_decodifica(lf):
     crudo = base64.b64encode(json.dumps({"titulo": "Desde base64"}).encode()).decode()
     evento = {
         "requestContext": {"http": {"method": "POST", "path": "/catalogo"}},
+        "headers": CON_CLAVE,
         "body": crudo, "isBase64Encoded": True,
         "queryStringParameters": None, "pathParameters": None,
     }
@@ -424,6 +431,7 @@ def test_el_id_se_saca_de_la_ruta_si_no_viene_en_pathParameters(lf):
     item = crear_item(lf, titulo="Sin pathParameters")
     evento = {
         "requestContext": {"http": {"method": "GET", "path": f"/catalogo/{item['item_id']}"}},
+        "headers": CON_CLAVE,
         "queryStringParameters": None, "pathParameters": None, "body": None,
     }
     respuesta = lf.lambda_handler(evento, None)
@@ -477,3 +485,165 @@ def test_los_acentos_sobreviven(lf):
     item = crear_item(lf, titulo="Cien años de soledad", notas="Vale la pena releerlo")
     _, cuerpo, _ = llamar(lf, "GET", "/catalogo", item_id=item["item_id"])
     assert cuerpo["titulo"] == "Cien años de soledad"
+
+
+# ==========================================================================
+# Acceso
+# ==========================================================================
+
+def test_sin_clave_devuelve_401(lf):
+    status, cuerpo, respuesta = llamar(lf, "GET", "/catalogo", token=SIN_CLAVE)
+    assert status == 401
+    assert "error" in cuerpo
+    assert respuesta["headers"]["WWW-Authenticate"] == "Bearer"
+
+
+def test_clave_equivocada_devuelve_401(lf):
+    status, _, _ = llamar(lf, "GET", "/catalogo", token="adivinando")
+    assert status == 401
+
+
+def test_sin_clave_no_se_puede_escribir_ni_borrar(lf):
+    """Lo que importa de verdad: quien vio la URL en la demo ya no modifica nada."""
+    item = crear_item(lf, titulo="Mio")
+
+    assert llamar(lf, "POST", "/catalogo", body={"titulo": "intruso"}, token=SIN_CLAVE)[0] == 401
+    assert llamar(lf, "PUT", "/catalogo", item_id=item["item_id"],
+                  body={"titulo": "cambiado"}, token=SIN_CLAVE)[0] == 401
+    assert llamar(lf, "DELETE", "/catalogo", item_id=item["item_id"], token=SIN_CLAVE)[0] == 401
+    assert llamar(lf, "POST", "/export", token=SIN_CLAVE)[0] == 401
+
+    _, leido, _ = llamar(lf, "GET", "/catalogo", item_id=item["item_id"])
+    assert leido["titulo"] == "Mio"
+    assert llamar(lf, "GET", "/catalogo")[1]["total"] == 1
+
+
+def test_sin_clave_no_se_revela_ni_que_rutas_existen(lf):
+    """Una ruta inexistente responde 401, no 404: no se le da un mapa a nadie."""
+    assert llamar(lf, "GET", "/no-existe", token=SIN_CLAVE)[0] == 401
+
+
+def test_la_clave_de_invitado_puede_ver_y_editar(lf):
+    item = crear_item(lf, titulo="Compartido")
+    status, _, _ = llamar(lf, "GET", "/catalogo", token=TOKEN_INVITADO)
+    assert status == 200
+    status, cuerpo, _ = llamar(lf, "PUT", "/catalogo", item_id=item["item_id"],
+                               body={"notas": "desde invitado"}, token=TOKEN_INVITADO)
+    assert status == 200
+    assert cuerpo["notas"] == "desde invitado"
+
+
+def test_quitar_la_clave_de_invitado_corta_su_acceso(lf, monkeypatch):
+    """Cambiar TOKEN_INVITADO en la consola deja fuera a quien la tenia, y a ti no."""
+    monkeypatch.setenv("TOKEN_INVITADO", "")
+    assert llamar(lf, "GET", "/catalogo", token=TOKEN_INVITADO)[0] == 401
+    assert llamar(lf, "GET", "/catalogo", token=TOKEN_PRINCIPAL)[0] == 200
+
+
+def test_sin_clave_principal_configurada_nadie_entra(lf, monkeypatch):
+    """Falla cerrada: si se borra la variable por error, la API no queda abierta."""
+    monkeypatch.setenv("TOKEN_PRINCIPAL", "")
+    assert llamar(lf, "GET", "/catalogo", token=SIN_CLAVE)[0] == 503
+    assert llamar(lf, "GET", "/catalogo", token=TOKEN_INVITADO)[0] == 503
+    assert llamar(lf, "GET", "/catalogo", token="")[0] == 503
+
+
+def test_clave_vacia_no_vale_aunque_la_invitada_no_exista(lf, monkeypatch):
+    """Una clave vacia nunca debe coincidir con una variable vacia."""
+    monkeypatch.setenv("TOKEN_INVITADO", "")
+    assert llamar(lf, "GET", "/catalogo", headers={"authorization": "Bearer "})[0] == 401
+    assert llamar(lf, "GET", "/catalogo", headers={"authorization": "Bearer"})[0] == 401
+
+
+def test_solo_se_acepta_el_esquema_bearer(lf):
+    for valor in (TOKEN_PRINCIPAL, f"Basic {TOKEN_PRINCIPAL}", f"Token {TOKEN_PRINCIPAL}"):
+        assert llamar(lf, "GET", "/catalogo", headers={"authorization": valor})[0] == 401
+
+
+def test_bearer_sin_distinguir_mayusculas(lf):
+    assert llamar(lf, "GET", "/catalogo",
+                  headers={"Authorization": f"bearer {TOKEN_PRINCIPAL}"})[0] == 200
+
+
+def test_la_clave_no_queda_en_los_logs(lf, capsys):
+    llamar(lf, "GET", "/catalogo")
+    llamar(lf, "GET", "/catalogo", headers={"Authorization": f"Bearer {TOKEN_PRINCIPAL}"})
+    salida = capsys.readouterr().out
+    assert TOKEN_PRINCIPAL not in salida
+    assert "[oculto]" in salida
+
+
+def test_la_clave_no_viaja_en_las_respuestas(lf):
+    crear_item(lf, titulo="X")
+    _, _, respuesta = llamar(lf, "GET", "/catalogo")
+    assert TOKEN_PRINCIPAL not in json.dumps(respuesta)
+
+
+# ==========================================================================
+# Fondos de pagina del diario
+# ==========================================================================
+
+def test_crear_entrada_con_fondo(lf):
+    item = crear_item(lf, tipo="diario", titulo="Hoy", contenido="algo", fondo="rayado")
+    assert item["fondo"] == "rayado"
+
+
+def test_cambiar_el_fondo_de_una_pagina(lf):
+    item = crear_item(lf, tipo="diario", titulo="Hoy", fondo="papel")
+    status, cuerpo, _ = llamar(lf, "PUT", "/catalogo", item_id=item["item_id"],
+                               body={"fondo": "noche"})
+    assert status == 200
+    assert cuerpo["fondo"] == "noche"
+
+
+def test_fondo_invalido_devuelve_400(lf):
+    status, cuerpo, _ = llamar(lf, "POST", "/catalogo",
+                               body={"titulo": "X", "tipo": "diario", "fondo": "<script>"})
+    assert status == 400
+    assert "fondo" in cuerpo["error"]
+
+    item = crear_item(lf, tipo="diario", titulo="Hoy")
+    status, _, _ = llamar(lf, "PUT", "/catalogo", item_id=item["item_id"],
+                          body={"fondo": "inventado"})
+    assert status == 400
+
+
+# ==========================================================================
+# Dia a dia: tareas y compras
+# ==========================================================================
+
+def test_crear_una_tarea_con_fecha(lf):
+    item = crear_item(lf, tipo="tarea", titulo="Pagar la luz", fecha="2026-09-30")
+    assert item["tipo"] == "tarea"
+    assert item["fecha"] == "2026-09-30"
+    assert item["estado"] == "pendiente"
+
+
+def test_crear_una_compra_con_lugar(lf):
+    item = crear_item(lf, tipo="compra", titulo="Leche", lugar="Soriana")
+    assert item["tipo"] == "compra"
+    assert item["lugar"] == "Soriana"
+
+
+def test_marcar_una_tarea_como_hecha(lf):
+    item = crear_item(lf, tipo="tarea", titulo="Llamar al dentista")
+    _, cuerpo, _ = llamar(lf, "PUT", "/catalogo", item_id=item["item_id"],
+                          body={"estado": "terminado"})
+    assert cuerpo["estado"] == "terminado"
+
+
+def test_filtrar_solo_las_compras(lf):
+    crear_item(lf, tipo="compra", titulo="Pan")
+    crear_item(lf, tipo="compra", titulo="Huevos")
+    crear_item(lf, tipo="tarea", titulo="Lavar")
+    _, cuerpo, _ = llamar(lf, "GET", "/catalogo", params={"tipo": "compra"})
+    assert cuerpo["total"] == 2
+    assert {i["titulo"] for i in cuerpo["items"]} == {"Pan", "Huevos"}
+
+
+def test_editar_el_lugar_de_una_compra(lf):
+    item = crear_item(lf, tipo="compra", titulo="Leche", lugar="Soriana")
+    _, cuerpo, _ = llamar(lf, "PUT", "/catalogo", item_id=item["item_id"],
+                          body={"lugar": "Walmart"})
+    assert cuerpo["lugar"] == "Walmart"
+

@@ -3,9 +3,15 @@ Catalogo personal - Proyecto Final Modulo 3 (Backend Serverless en AWS)
 
 Una sola Lambda que atiende los 6 endpoints a traves de API Gateway (HTTP API).
 Los nombres de la tabla y el bucket vienen de variables de entorno: nunca hardcodeados.
+
+Acceso: toda peticion debe traer "Authorization: Bearer <token>". Los tokens
+validos vienen de TOKEN_PRINCIPAL (el tuyo) y TOKEN_INVITADO (el que se comparte;
+cambiarlo corta el acceso a quien lo tenga sin tocar el tuyo). Si TOKEN_PRINCIPAL
+no esta configurado, la API rechaza todo: falla cerrada, nunca abierta.
 """
 
 import base64
+import hmac
 import json
 import os
 import uuid
@@ -21,8 +27,18 @@ BUCKET_NAME = os.environ["BUCKET_NAME"]
 table = boto3.resource("dynamodb").Table(TABLE_NAME)
 s3 = boto3.client("s3")
 
-TIPOS_VALIDOS = {"libro", "pelicula", "serie", "musica", "juego", "restaurante", "diario"}
+# tarea y compra son para el dia a dia: lo que hay que hacer y lo que hay que comprar.
+TIPOS_VALIDOS = {"libro", "pelicula", "serie", "musica", "juego", "restaurante",
+                 "tarea", "compra", "diario"}
 ESTADOS_VALIDOS = {"pendiente", "en_curso", "terminado", "abandonado"}
+
+# Fondos de pagina para las entradas del diario. Se validan para no guardar
+# cualquier texto que llegue en el campo.
+FONDOS_VALIDOS = {"papel", "crema", "rayado", "cuadricula", "lino",
+                  "rosa", "menta", "cielo", "lavanda", "noche"}
+
+CAMPOS_EXTRA = ("rating", "notas", "tags", "autor", "director", "plataforma",
+                "ciudad", "lugar", "contenido", "fecha", "fecha_consumido", "fondo")
 
 
 class DecimalEncoder(json.JSONEncoder):
@@ -34,13 +50,64 @@ class DecimalEncoder(json.JSONEncoder):
         return super().default(o)
 
 
-def responder(status, cuerpo):
+def responder(status, cuerpo, headers=None):
     # Sin statusCode, headers y body, API Gateway devuelve 502.
     return {
         "statusCode": status,
-        "headers": {"Content-Type": "application/json"},
+        "headers": {"Content-Type": "application/json", **(headers or {})},
         "body": json.dumps(cuerpo, cls=DecimalEncoder, ensure_ascii=False),
     }
+
+
+# --------------------------------------------------------------------------
+# Acceso
+# --------------------------------------------------------------------------
+
+def tokens_validos():
+    """Se leen en cada llamada: cambiar la variable en la consola surte efecto
+    en la siguiente peticion, sin redesplegar."""
+    return [t for t in (os.environ.get("TOKEN_PRINCIPAL", "").strip(),
+                        os.environ.get("TOKEN_INVITADO", "").strip()) if t]
+
+
+def token_de(event):
+    """Saca el token de "Authorization: Bearer <token>". HTTP API entrega los
+    nombres de header en minusculas, pero REST API no: se buscan sin distinguir."""
+    headers = event.get("headers") or {}
+    valor = next((v for k, v in headers.items() if k.lower() == "authorization"), "")
+    tipo, _, token = (valor or "").partition(" ")
+    if tipo.lower() != "bearer":
+        return ""
+    return token.strip()
+
+
+def autorizado(event):
+    """None si pasa; si no, la respuesta de rechazo lista para devolver."""
+    validos = tokens_validos()
+    if not os.environ.get("TOKEN_PRINCIPAL", "").strip():
+        # Falla cerrada: sin token principal configurado no entra nadie.
+        return responder(503, {"error": "La API no tiene configurado el acceso"})
+
+    token = token_de(event)
+    # compare_digest compara en tiempo constante: no deja adivinar el token
+    # midiendo cuanto tarda la respuesta.
+    if token and any(hmac.compare_digest(token.encode(), t.encode()) for t in validos):
+        return None
+
+    return responder(401, {"error": "Clave de acceso invalida o ausente"},
+                     headers={"WWW-Authenticate": "Bearer"})
+
+
+def para_el_log(event):
+    """Copia del evento sin la clave: el evento completo se escribe en
+    CloudWatch, y la clave no debe quedar en los logs."""
+    copia = dict(event)
+    headers = dict(copia.get("headers") or {})
+    for k in list(headers):
+        if k.lower() == "authorization":
+            headers[k] = "[oculto]"
+    copia["headers"] = headers
+    return copia
 
 
 def ahora():
@@ -120,10 +187,13 @@ def crear(cuerpo):
         "creado_en": ahora(),
     }
 
+    fondo = cuerpo.get("fondo")
+    if fondo is not None and fondo not in FONDOS_VALIDOS:
+        return responder(400, {"error": f"fondo invalido. Validos: {sorted(FONDOS_VALIDOS)}"})
+
     # Los items no comparten los mismos campos: un libro lleva autor,
     # un restaurante lleva ciudad, una entrada de diario lleva contenido.
-    for campo in ("rating", "notas", "tags", "autor", "director", "plataforma",
-                  "ciudad", "contenido", "fecha", "fecha_consumido"):
+    for campo in CAMPOS_EXTRA:
         if cuerpo.get(campo) is not None:
             item[campo] = a_decimal(cuerpo[campo])
 
@@ -136,9 +206,7 @@ def actualizar(item_id, cuerpo):
     if not table.get_item(Key={"item_id": item_id}).get("Item"):
         return responder(404, {"error": "No existe un item con ese id"})
 
-    editables = ("titulo", "tipo", "estado", "rating", "notas", "tags", "autor",
-                 "director", "plataforma", "ciudad", "contenido", "fecha",
-                 "fecha_consumido")
+    editables = ("titulo", "tipo", "estado") + CAMPOS_EXTRA
     cambios = {c: a_decimal(cuerpo[c]) for c in editables if c in cuerpo}
     if not cambios:
         return responder(400, {"error": "No se envio ningun campo editable"})
@@ -147,6 +215,8 @@ def actualizar(item_id, cuerpo):
         return responder(400, {"error": f"tipo invalido. Validos: {sorted(TIPOS_VALIDOS)}"})
     if "estado" in cambios and cambios["estado"] not in ESTADOS_VALIDOS:
         return responder(400, {"error": f"estado invalido. Validos: {sorted(ESTADOS_VALIDOS)}"})
+    if "fondo" in cambios and cambios["fondo"] not in FONDOS_VALIDOS:
+        return responder(400, {"error": f"fondo invalido. Validos: {sorted(FONDOS_VALIDOS)}"})
 
     # Si se marca como terminado y no viene la fecha, se pone sola.
     if cambios.get("estado") == "terminado" and "fecha_consumido" not in cambios:
@@ -208,9 +278,15 @@ def exportar(params):
 # --------------------------------------------------------------------------
 
 def lambda_handler(event, context):
-    print(f"Evento recibido: {json.dumps(event)}")  # la mejor herramienta de debug
+    print(f"Evento recibido: {json.dumps(para_el_log(event))}")  # la mejor herramienta de debug
 
     try:
+        # El acceso se revisa antes que nada, incluso antes de saber si la ruta
+        # existe: a quien no tiene clave no se le dice ni que rutas hay.
+        rechazo = autorizado(event)
+        if rechazo:
+            return rechazo
+
         # HTTP API (payload v2) y, por si acaso, REST API (v1).
         contexto_http = event.get("requestContext", {}).get("http", {})
         metodo = contexto_http.get("method") or event.get("httpMethod", "")

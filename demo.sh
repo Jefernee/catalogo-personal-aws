@@ -2,6 +2,7 @@
 # Demo en vivo - orden del proyecto: crear, listar, actualizar, exportar.
 #
 #   export API=https://TU-ID.execute-api.us-east-1.amazonaws.com
+#   export CATALOGO_TOKEN=<tu clave>
 #   bash demo.sh
 #
 # Despues de correrlo, mostrar en la consola de AWS, en este orden:
@@ -12,14 +13,21 @@
 
 set -e
 
-if [ -z "$API" ]; then
-  echo "Falta la variable API. Ejemplo:"
+if [ -z "$API" ] || [ -z "$CATALOGO_TOKEN" ]; then
+  echo "Faltan variables. Ejemplo:"
   echo "  export API=https://abc123.execute-api.us-east-1.amazonaws.com"
+  echo "  export CATALOGO_TOKEN=<tu clave>"
   exit 1
 fi
 
+AUTH="Authorization: Bearer $CATALOGO_TOKEN"
+
+echo "== 0. Sin clave no entra nadie ================================"
+curl -s -o /dev/null -w "sin clave -> HTTP %{http_code}\n" "$API/catalogo"
+echo
+
 echo "== 1. Crear un item =========================================="
-RESPUESTA=$(curl -s -X POST "$API/catalogo" \
+RESPUESTA=$(curl -s -X POST -H "$AUTH" "$API/catalogo" \
   -H "Content-Type: application/json" \
   -d '{"tipo":"libro","titulo":"Piranesi","autor":"Susanna Clarke","estado":"pendiente"}')
 echo "$RESPUESTA"
@@ -29,34 +37,34 @@ echo "id creado: $ID"
 
 echo
 echo "== 2. Listar todo ============================================"
-curl -s "$API/catalogo"
+curl -s -H "$AUTH" "$API/catalogo"
 
 echo
 echo
 echo "== 3. Listar con filtro (scan con FilterExpression) =========="
-curl -s "$API/catalogo?tipo=libro&estado=pendiente"
+curl -s -H "$AUTH" "$API/catalogo?tipo=libro&estado=pendiente"
 
 echo
 echo
 echo "== 4. Obtener uno por ID ====================================="
-curl -s "$API/catalogo/$ID"
+curl -s -H "$AUTH" "$API/catalogo/$ID"
 
 echo
 echo
 echo "== 5. Actualizar: lo termine y le pongo rating ==============="
-curl -s -X PUT "$API/catalogo/$ID" \
+curl -s -X PUT -H "$AUTH" "$API/catalogo/$ID" \
   -H "Content-Type: application/json" \
   -d '{"estado":"terminado","rating":5,"notas":"Rarisimo y precioso"}'
 
 echo
 echo
 echo "== 6. Exportar a S3 =========================================="
-curl -s -X POST "$API/export"
+curl -s -X POST -H "$AUTH" "$API/export"
 
 echo
 echo
 echo "== 7. Eliminar ==============================================="
-curl -s -X DELETE "$API/catalogo/$ID"
+curl -s -X DELETE -H "$AUTH" "$API/catalogo/$ID"
 
 echo
 echo

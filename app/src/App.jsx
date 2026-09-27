@@ -1,87 +1,132 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { api, guardarUrl, leerUrl } from "./api";
-import {
-  EntradaDiario,
-  Filtros,
-  Metricas,
-  ModalDiario,
-  ModalItem,
-  Tarjeta,
-} from "./componentes";
-import { Alerta, Check, Engrane, Luna, Mas, Nube, Recargar, Sol } from "./iconos";
+import { ErrorApi, api, cerrarSesion, leerToken, leerUrl, tomarDatosDelEnlace } from "./api";
+import { ModalAjustes, ModalCompartir, PantallaAcceso } from "./acceso";
+import { Filtros, Metricas, ModalItem, Tarjeta } from "./componentes";
+import { EditorPagina, Libro } from "./diario";
+import { Alerta, Check, Compartir, Engrane, Mas, Recargar } from "./iconos";
+
+// Nombre de la sección de tareas, compras, libros y demás. Cambiarlo aquí basta.
+export const NOMBRE_LISTAS = "Listas";
+
+const recordado = (llave, porDefecto) => {
+  try {
+    return localStorage.getItem(llave) || porDefecto;
+  } catch {
+    return porDefecto;
+  }
+};
+const recordar = (llave, valor) => {
+  try {
+    localStorage.setItem(llave, valor);
+  } catch {
+    /* sin persistencia en modo privado */
+  }
+};
 
 export default function App() {
-  const [url, setUrl] = useState(leerUrl());
-  const [pestana, setPestana] = useState("catalogo");
+  const [conSesion, setConSesion] = useState(() => Boolean(leerUrl() && leerToken()));
+  const [avisoAcceso, setAvisoAcceso] = useState("");
+  const [pestana, setPestana] = useState(() => recordado("catalogo.pestana", "diario"));
   const [items, setItems] = useState([]);
   const [cargando, setCargando] = useState(false);
   const [brindis, setBrindis] = useState(null);
-  const [modal, setModal] = useState(null);   // { tipo: "item" | "diario", item?: {...} }
+  const [modal, setModal] = useState(null); // { tipo: "item" | "pagina" | "ajustes", item? }
   const [filtros, setFiltros] = useState({ tipo: "", estado: "", busqueda: "" });
-  const [tema, setTema] = useState(() => {
-    try {
-      return localStorage.getItem("catalogo.tema") || "claro";
-    } catch {
-      return "claro";
-    }
-  });
+  // "sistema" sigue al teléfono: si está en oscuro, la app también.
+  const [tema, setTema] = useState(() => recordado("catalogo.tema", "sistema"));
 
   // El tema vive en el atributo data-tema del <html>; el CSS hace el resto.
+  // Sin atributo, manda prefers-color-scheme: lo que tenga el sistema.
   useEffect(() => {
-    document.documentElement.dataset.tema = tema;
-    try {
-      localStorage.setItem("catalogo.tema", tema);
-    } catch {
-      /* sin persistencia en modo privado */
-    }
+    if (tema === "sistema") delete document.documentElement.dataset.tema;
+    else document.documentElement.dataset.tema = tema;
+    recordar("catalogo.tema", tema);
   }, [tema]);
 
+  useEffect(() => recordar("catalogo.pestana", pestana), [pestana]);
+
   const avisar = useCallback((texto, tipo = "ok") => {
-    setBrindis({ texto, tipo });
-    setTimeout(() => setBrindis(null), 3500);
+    setBrindis({ texto, tipo, id: Date.now() });
   }, []);
 
-  // Un 404 quiere decir que la pantalla quedo desactualizada: alguien borro
-  // ese item desde otro lado. Se recarga la lista en vez de dejar un error.
-  const manejarError = useCallback(async (e, recargar) => {
-    if (e?.estado === 404) {
-      avisar("Ese ítem ya no existe. Actualicé la lista.");
-      await recargar();
-      return;
-    }
-    avisar(e.message, "error");
-  }, [avisar]);
+  useEffect(() => {
+    if (!brindis) return undefined;
+    const t = setTimeout(() => setBrindis(null), 3600);
+    return () => clearTimeout(t);
+  }, [brindis]);
+
+  /** Sale a la pantalla de acceso. Se usa al cerrar sesión y cuando la clave dejó de valer. */
+  const expulsar = useCallback((aviso = "") => {
+    cerrarSesion();
+    setItems([]);
+    setModal(null);
+    setAvisoAcceso(aviso);
+    setConSesion(false);
+  }, []);
 
   const cargar = useCallback(async () => {
-    if (!leerUrl()) return;
     setCargando(true);
     try {
       const datos = await api.listar();
       setItems(datos.items || []);
     } catch (e) {
-      avisar(e.message, "error");
+      if (e instanceof ErrorApi && e.estado === 401) expulsar("Tu clave ya no es válida. Vuelve a entrar.");
+      else avisar(e.message, "error");
     } finally {
       setCargando(false);
     }
-  }, [avisar]);
+  }, [avisar, expulsar]);
 
   useEffect(() => {
-    cargar();
-  }, [cargar]);
+    if (conSesion) cargar();
+  }, [conSesion, cargar]);
 
-  // El filtrado se hace en el cliente porque ya tenemos todo en memoria;
-  // la API también sabe filtrar (?tipo=&estado=) y es lo que usa el export.
+  // Abrir un enlace de acceso con la app ya abierta en esa pestaña no recarga
+  // la página: solo cambia lo que va después del "#". Se escucha ese cambio.
+  useEffect(() => {
+    const alCambiarEnlace = () => {
+      if (!tomarDatosDelEnlace()) return;
+      setAvisoAcceso("");
+      if (conSesion) cargar();
+      else setConSesion(Boolean(leerUrl() && leerToken()));
+    };
+    window.addEventListener("hashchange", alCambiarEnlace);
+    return () => window.removeEventListener("hashchange", alCambiarEnlace);
+  }, [conSesion, cargar]);
+
+  // 401: la clave cambió (o la revocaron) → a la pantalla de acceso.
+  // 404: la pantalla quedó desactualizada → se recarga la lista.
+  const manejarError = useCallback(
+    async (e) => {
+      if (e instanceof ErrorApi && e.estado === 401) {
+        expulsar("Tu clave ya no es válida. Vuelve a entrar.");
+        return;
+      }
+      if (e instanceof ErrorApi && e.estado === 404) {
+        avisar("Eso ya no existe. Actualicé la lista.");
+        await cargar();
+        return;
+      }
+      avisar(e.message, "error");
+    },
+    [avisar, cargar, expulsar]
+  );
+
+  const diario = useMemo(() => items.filter((i) => i.tipo === "diario"), [items]);
+  const listas = useMemo(() => items.filter((i) => i.tipo !== "diario"), [items]);
+
   const visibles = useMemo(() => {
     const texto = filtros.busqueda.trim().toLowerCase();
-    return items
-      .filter((i) => (pestana === "diario" ? i.tipo === "diario" : i.tipo !== "diario"))
+    return listas
       .filter((i) => (filtros.tipo ? i.tipo === filtros.tipo : true))
       .filter((i) => (filtros.estado ? i.estado === filtros.estado : true))
       .filter((i) => (texto ? (i.titulo || "").toLowerCase().includes(texto) : true))
-      .sort((a, b) => String(b.creado_en || "").localeCompare(String(a.creado_en || "")));
-  }, [items, filtros, pestana]);
-
-  const delCatalogo = useMemo(() => items.filter((i) => i.tipo !== "diario"), [items]);
+      // Lo pendiente arriba; lo terminado baja al final.
+      .sort((a, b) =>
+        Number(a.estado === "terminado") - Number(b.estado === "terminado") ||
+        String(b.creado_en || "").localeCompare(String(a.creado_en || ""))
+      );
+  }, [listas, filtros]);
 
   async function guardar(cuerpo) {
     const editando = modal?.item;
@@ -93,12 +138,12 @@ export default function App() {
       } else {
         const creado = await api.crear(cuerpo);
         setItems((previos) => [creado, ...previos]);
-        avisar(`"${creado.titulo}" agregado`);
+        avisar(creado.tipo === "diario" ? "Página guardada" : `"${creado.titulo}" agregado`);
       }
       return true;
     } catch (e) {
-      await manejarError(e, cargar);
-      return e?.estado === 404;   // se cierra el modal: ya no hay nada que editar
+      await manejarError(e);
+      return e instanceof ErrorApi && e.estado === 404; // se cierra: ya no hay nada que editar
     }
   }
 
@@ -110,45 +155,53 @@ export default function App() {
       setItems((previos) => previos.map((i) => (i.item_id === nuevo.item_id ? nuevo : i)));
     } catch (e) {
       setItems(antes); // se revierte lo que se pintó por adelantado
-      await manejarError(e, cargar);
+      await manejarError(e);
     }
   }
 
   async function borrar(item) {
-    if (!confirm(`¿Borrar "${item.titulo}"?`)) return;
+    const que = item.tipo === "diario" ? "esta página" : `"${item.titulo}"`;
+    if (!window.confirm(`¿Borrar ${que}? No se puede deshacer.`)) return;
     const antes = items;
     setItems((previos) => previos.filter((i) => i.item_id !== item.item_id));
     try {
       await api.eliminar(item.item_id);
-      avisar("Eliminado");
+      avisar(item.tipo === "diario" ? "Página borrada" : "Eliminado");
     } catch (e) {
-      if (e?.estado === 404) {
-        // Ya no estaba: el borrado local es el resultado correcto.
-        avisar("Ese ítem ya no existía.");
-        return;
-      }
+      if (e instanceof ErrorApi && e.estado === 404) return; // ya no estaba: el borrado local es correcto
       setItems(antes);
-      avisar(e.message, "error");
+      await manejarError(e);
     }
   }
 
-  async function exportar() {
+  /** Copia en el bucket de S3: el catálogo y, aparte, el diario. */
+  async function respaldarEnNube() {
     try {
-      const esDiario = pestana === "diario";
-      const r = await api.exportar(esDiario ? "diario" : "");
-      avisar(`${r.total_registros} registros → ${r.archivo} en S3`);
+      const [listasS3, diarioS3] = await Promise.all([api.exportar(""), api.exportar("diario")]);
+      avisar(`Copia guardada en S3: ${listasS3.total_registros + diarioS3.total_registros} registros`);
     } catch (e) {
-      avisar(e.message, "error");
+      await manejarError(e);
     }
   }
 
-  function conectar(nueva) {
-    guardarUrl(nueva);
-    setUrl(leerUrl());
-    cargar();
+  if (!conSesion) {
+    return (
+      <PantallaAcceso
+        aviso={avisoAcceso}
+        alEntrar={() => {
+          setAvisoAcceso("");
+          setConSesion(true);
+        }}
+      />
+    );
   }
 
-  if (!url) return <PantallaConexion alConectar={conectar} />;
+  const nuevo = () =>
+    setModal(
+      pestana === "diario"
+        ? { tipo: "pagina" }
+        : { tipo: "item", tipoInicial: filtros.tipo || "tarea" }
+    );
 
   return (
     <>
@@ -156,159 +209,151 @@ export default function App() {
         <div className="cabecera-interna">
           <div className="marca">
             <img src="./icono.svg" alt="" />
-            <h1>Mi catálogo</h1>
+            <h1>Mi diario</h1>
           </div>
-          <span className="crece" />
           <button
-            className="btn btn--sutil btn--icono"
-            onClick={() => setTema(tema === "claro" ? "oscuro" : "claro")}
-            title={tema === "claro" ? "Cambiar a tema oscuro" : "Cambiar a tema claro"}
-            aria-label="Cambiar tema"
-          >
-            {tema === "claro" ? <Luna /> : <Sol />}
-          </button>
-          <button
+            type="button"
             className="btn btn--sutil btn--icono"
             onClick={cargar}
             title="Actualizar"
             aria-label="Actualizar"
             disabled={cargando}
           >
-            <Recargar />
+            <Recargar className={cargando ? "girando" : ""} />
           </button>
           <button
+            type="button"
             className="btn btn--sutil btn--icono"
-            title="Cambiar la URL de la API"
-            aria-label="Configuración"
-            onClick={() => {
-              const nueva = prompt("URL de la API", leerUrl());
-              if (nueva !== null && nueva.trim()) conectar(nueva);
-            }}
+            title="Ajustes"
+            aria-label="Ajustes"
+            onClick={() => setModal({ tipo: "ajustes" })}
           >
             <Engrane />
           </button>
-          <button className="btn btn--secundario" onClick={exportar} title="Exportar a S3">
-            <Nube />
-            <span className="etiqueta-boton">Exportar</span>
+          <button
+            type="button"
+            className="btn btn--secundario"
+            onClick={() => setModal({ tipo: "compartir" })}
+            title="Compartir acceso"
+          >
+            <Compartir />
+            <span className="etiqueta-boton">Compartir</span>
           </button>
         </div>
       </header>
 
-      <main className="envoltura">
-        <Metricas items={delCatalogo} />
-
+      <main className={`envoltura envoltura--${pestana}`}>
         <div className="pestanas" role="tablist">
-          <button role="tab" aria-selected={pestana === "catalogo"} onClick={() => setPestana("catalogo")}>
-            Catálogo
-          </button>
-          <button role="tab" aria-selected={pestana === "diario"} onClick={() => setPestana("diario")}>
+          <button type="button" role="tab" aria-selected={pestana === "diario"} onClick={() => setPestana("diario")}>
             Diario
+            {diario.length > 0 && <span className="contador">{diario.length}</span>}
+          </button>
+          <button type="button" role="tab" aria-selected={pestana === "listas"} onClick={() => setPestana("listas")}>
+            {NOMBRE_LISTAS}
+            {listas.length > 0 && <span className="contador">{listas.length}</span>}
           </button>
         </div>
 
-        {pestana === "catalogo" && (
-          <Filtros
-            {...filtros}
-            alCambiar={(cambio) => setFiltros((previos) => ({ ...previos, ...cambio }))}
-          />
-        )}
-
-        {cargando && items.length === 0 ? (
-          <div className="rejilla">
-            {[0, 1, 2, 3, 4, 5].map((n) => <div key={n} className="esqueleto" />)}
-          </div>
-        ) : pestana === "catalogo" ? (
-          <div className="rejilla">
-            {visibles.length === 0 ? (
-              <Vacio
-                icono="🗂️"
-                titulo={items.length === 0 ? "Tu catálogo está vacío" : "Sin resultados"}
-                texto={
-                  items.length === 0
-                    ? "Agrega el primer libro, serie o juego que quieras seguir."
-                    : "Ningún ítem coincide con esos filtros."
-                }
-                accion={
-                  items.length === 0 ? (
-                    <button className="btn btn--primario" onClick={() => setModal({ tipo: "item" })}>
-                      <Mas width={16} height={16} /> Agregar el primero
-                    </button>
-                  ) : (
-                    <button
-                      className="btn btn--secundario"
-                      onClick={() => setFiltros({ tipo: "", estado: "", busqueda: "" })}
-                    >
-                      Limpiar filtros
-                    </button>
-                  )
-                }
-              />
-            ) : (
-              visibles.map((item) => (
-                <Tarjeta
-                  key={item.item_id}
-                  item={item}
-                  alActualizar={actualizar}
-                  alBorrar={borrar}
-                  alEditar={(i) => setModal({ tipo: "item", item: i })}
-                />
-              ))
-            )}
-          </div>
+        {pestana === "diario" ? (
+          cargando && items.length === 0 ? (
+            <div className="esqueleto esqueleto--libro" />
+          ) : (
+            <Libro
+              entradas={diario}
+              alEscribir={() => setModal({ tipo: "pagina" })}
+              alEditar={(i) => setModal({ tipo: "pagina", item: i })}
+              alBorrar={borrar}
+            />
+          )
         ) : (
-          <div>
-            {visibles.length === 0 ? (
-              <Vacio
-                icono="📔"
-                titulo="El diario está en blanco"
-                texto="Escribe la primera entrada; no se incluye en el export salvo que lo pidas."
-                accion={
-                  <button className="btn btn--primario" onClick={() => setModal({ tipo: "diario" })}>
-                    <Mas width={16} height={16} /> Escribir entrada
-                  </button>
-                }
-              />
+          <>
+            <Metricas items={listas} />
+            <Filtros {...filtros} alCambiar={(cambio) => setFiltros((p) => ({ ...p, ...cambio }))} />
+            {cargando && items.length === 0 ? (
+              <div className="rejilla">
+                {[0, 1, 2, 3, 4, 5].map((n) => <div key={n} className="esqueleto" />)}
+              </div>
             ) : (
-              visibles.map((item) => (
-                <EntradaDiario
-                  key={item.item_id}
-                  item={item}
-                  alBorrar={borrar}
-                  alEditar={(i) => setModal({ tipo: "diario", item: i })}
-                />
-              ))
+              <div className="rejilla">
+                {visibles.length === 0 ? (
+                  <Vacio
+                    icono={listas.length === 0 ? "🗒️" : "🔎"}
+                    titulo={listas.length === 0 ? "Tus listas están vacías" : "Sin resultados"}
+                    texto={
+                      listas.length === 0
+                        ? "Anota una tarea, algo que comprar o una serie por ver."
+                        : "Nada coincide con esos filtros."
+                    }
+                    accion={
+                      listas.length === 0 ? (
+                        <button type="button" className="btn btn--primario" onClick={nuevo}>
+                          <Mas width={16} height={16} /> Agregar lo primero
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn btn--secundario"
+                          onClick={() => setFiltros({ tipo: "", estado: "", busqueda: "" })}
+                        >
+                          Limpiar filtros
+                        </button>
+                      )
+                    }
+                  />
+                ) : (
+                  visibles.map((item) => (
+                    <Tarjeta
+                      key={item.item_id}
+                      item={item}
+                      alActualizar={actualizar}
+                      alBorrar={borrar}
+                      alEditar={(i) => setModal({ tipo: "item", item: i })}
+                    />
+                  ))
+                )}
+              </div>
             )}
-          </div>
+          </>
         )}
       </main>
 
-      <button
-        className="btn btn--primario flotante"
-        onClick={() => setModal({ tipo: pestana === "diario" ? "diario" : "item" })}
-      >
+      <button type="button" className="btn btn--primario flotante" onClick={nuevo}>
         <Mas width={17} height={17} />
-        {pestana === "diario" ? "Nueva entrada" : "Agregar"}
+        {pestana === "diario" ? "Nueva página" : "Agregar"}
       </button>
 
       {modal?.tipo === "item" && (
         <ModalItem
           key={modal.item?.item_id || "nuevo"}
           item={modal.item}
+          tipoInicial={modal.tipoInicial}
           alCerrar={() => setModal(null)}
           alGuardar={guardar}
         />
       )}
-      {modal?.tipo === "diario" && (
-        <ModalDiario
-          key={modal.item?.item_id || "nuevo"}
+      {modal?.tipo === "pagina" && (
+        <EditorPagina
+          key={modal.item?.item_id || "nueva"}
           item={modal.item}
           alCerrar={() => setModal(null)}
           alGuardar={guardar}
         />
       )}
+      {modal?.tipo === "ajustes" && (
+        <ModalAjustes
+          alCerrar={() => setModal(null)}
+          alSalir={() => expulsar("")}
+          tema={tema}
+          alElegirTema={setTema}
+          items={items}
+          alRespaldarEnNube={respaldarEnNube}
+          avisar={avisar}
+        />
+      )}
+      {modal?.tipo === "compartir" && <ModalCompartir alCerrar={() => setModal(null)} avisar={avisar} />}
 
       {brindis && (
-        <div className={`brindis ${brindis.tipo === "error" ? "error" : ""}`} role="status">
+        <div key={brindis.id} className={`brindis ${brindis.tipo === "error" ? "error" : ""}`} role="status">
           {brindis.tipo === "error" ? <Alerta width={17} height={17} /> : <Check width={17} height={17} />}
           {brindis.texto}
         </div>
@@ -325,45 +370,5 @@ function Vacio({ icono, titulo, texto, accion }) {
       <div>{texto}</div>
       {accion && <div style={{ marginTop: 18 }}>{accion}</div>}
     </div>
-  );
-}
-
-function PantallaConexion({ alConectar }) {
-  const [valor, setValor] = useState("");
-
-  return (
-    <main className="envoltura">
-      <div className="conectar">
-        <img src="./icono.svg" alt="" />
-        <h2>Conecta tu API</h2>
-        <p>Pega la URL de invocación de tu API Gateway. Queda guardada en este dispositivo.</p>
-
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (valor.trim()) alConectar(valor);
-          }}
-        >
-          <div className="campo">
-            <label htmlFor="api">URL de la API</label>
-            <input
-              id="api"
-              autoFocus
-              value={valor}
-              onChange={(e) => setValor(e.target.value)}
-              placeholder="https://xxxx.execute-api.us-east-1.amazonaws.com"
-            />
-          </div>
-          <button className="btn btn--primario btn--bloque" type="submit">
-            Conectar
-          </button>
-        </form>
-
-        <p className="ayuda">
-          Si no carga nada, falta habilitar <code>CORS</code> en API Gateway. Está explicado en
-          el LEEME de la app.
-        </p>
-      </div>
-    </main>
   );
 }

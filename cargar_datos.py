@@ -5,7 +5,9 @@ Dos formas, segun lo que tengas a mano:
 
   1. A traves de tu propia API (no necesita AWS CLI ni credenciales):
 
-        python cargar_datos.py https://TU-ID.execute-api.us-east-1.amazonaws.com/dev
+        python cargar_datos.py <URL_DE_LA_API> <CLAVE>
+
+     La clave tambien puede ir en la variable de entorno CATALOGO_TOKEN.
 
   2. Directo a DynamoDB (necesita el AWS CLI configurado con `aws configure`):
 
@@ -15,6 +17,7 @@ La opcion 1 ademas prueba de paso que tu endpoint POST funciona.
 """
 
 import json
+import os
 import sys
 import urllib.error
 import urllib.request
@@ -23,7 +26,7 @@ TABLE_NAME = "catalogo-personal"
 REGION = "us-east-1"
 
 
-def cargar_por_api(base):
+def cargar_por_api(base, clave):
     base = base.rstrip("/")
     cargados = 0
 
@@ -32,7 +35,8 @@ def cargar_por_api(base):
             f"{base}/catalogo",
             data=json.dumps(item).encode(),
             method="POST",
-            headers={"Content-Type": "application/json"},
+            headers={"Content-Type": "application/json",
+                     "Authorization": f"Bearer {clave}"},
         )
         try:
             with urllib.request.urlopen(peticion, timeout=30) as r:
@@ -75,16 +79,20 @@ if __name__ == "__main__":
         items = json.load(f)
 
     if len(sys.argv) > 1:
-        sys.exit(cargar_por_api(sys.argv[1]))
+        clave = sys.argv[2] if len(sys.argv) > 2 else os.environ.get("CATALOGO_TOKEN", "")
+        if not clave:
+            print("Falta la clave: pasala como segundo argumento o en CATALOGO_TOKEN.")
+            sys.exit(2)
+        sys.exit(cargar_por_api(sys.argv[1], clave))
 
     try:
         sys.exit(cargar_por_boto3())
     except ImportError:
         print("boto3 no esta instalado. Pasa la URL de tu API:")
-        print("  python cargar_datos.py https://TU-ID.execute-api.us-east-1.amazonaws.com/dev")
+        print("  python cargar_datos.py <URL_DE_LA_API> <CLAVE>")
         sys.exit(2)
     except Exception as error:
         print(f"Fallo la carga directa: {error}")
         print("\nSi no tienes el AWS CLI configurado, pasa la URL de tu API:")
-        print("  python cargar_datos.py https://TU-ID.execute-api.us-east-1.amazonaws.com/dev")
+        print("  python cargar_datos.py <URL_DE_LA_API> <CLAVE>")
         sys.exit(1)

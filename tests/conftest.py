@@ -24,6 +24,10 @@ TABLE_NAME = "catalogo-personal-test"
 BUCKET_NAME = "catalogo-personal-test-bucket"
 REGION = "us-east-1"
 
+# Claves de prueba: nada que ver con las reales, que viven fuera de git.
+TOKEN_PRINCIPAL = "clave-principal-de-prueba"
+TOKEN_INVITADO = "clave-invitado-de-prueba"
+
 
 @pytest.fixture
 def lf():
@@ -37,6 +41,8 @@ def lf():
             "AWS_SESSION_TOKEN": "testing",
             "TABLE_NAME": TABLE_NAME,
             "BUCKET_NAME": BUCKET_NAME,
+            "TOKEN_PRINCIPAL": TOKEN_PRINCIPAL,
+            "TOKEN_INVITADO": TOKEN_INVITADO,
         })
 
         boto3.resource("dynamodb", region_name=REGION).create_table(
@@ -61,14 +67,26 @@ def s3():
 # Helpers
 # --------------------------------------------------------------------------
 
-def llamar(lf, metodo, ruta, body=None, params=None, item_id=None, crudo=None):
-    """Arma un evento de API Gateway (HTTP API, payload v2) y lo invoca."""
+SIN_CLAVE = object()   # centinela: "no mandes el header Authorization"
+
+
+def llamar(lf, metodo, ruta, body=None, params=None, item_id=None, crudo=None,
+           token=TOKEN_PRINCIPAL, headers=None):
+    """Arma un evento de API Gateway (HTTP API, payload v2) y lo invoca.
+
+    Por defecto va autenticado con la clave principal. token=SIN_CLAVE manda la
+    peticion sin header; headers= permite armar el header a mano.
+    """
     # API Gateway manda el id en la ruta Y en pathParameters.
     if item_id and not ruta.rstrip("/").endswith(item_id):
         ruta = f"{ruta.rstrip('/')}/{item_id}"
 
+    if headers is None:
+        headers = {} if token is SIN_CLAVE else {"authorization": f"Bearer {token}"}
+
     evento = {
         "requestContext": {"http": {"method": metodo, "path": ruta}},
+        "headers": headers,
         "queryStringParameters": params,
         "pathParameters": {"id": item_id} if item_id else None,
         "body": crudo if crudo is not None else (json.dumps(body) if body is not None else None),

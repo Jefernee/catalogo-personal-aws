@@ -3,9 +3,13 @@
 Proyecto Final del **Módulo 3 (Cloud AWS)** del curso de Creai. Es individual y se
 entrega con **demo en vivo + repositorio**, en las semanas 23 y 24.
 
-Dominio elegido: **catálogo personal** — libros, películas, series, música, juegos y
-restaurantes, con estado y calificación, más un **diario** que vive en la misma tabla
-como un `tipo` más.
+Dominio elegido: **catálogo personal**, que con el uso se volvió **"Mi diario"**: un diario
+que se ve como libro (páginas con fondo elegible, la más reciente primero) y una sección
+**Listas** con tareas, compras, libros, películas, series, música, juegos y restaurantes.
+Todo vive en la misma tabla, distinguido por el campo `tipo`.
+
+El proyecto **ya se presentó**. Desde entonces la API exige clave: quienes vieron la URL
+en la demo no pueden entrar.
 
 Repositorio: <https://github.com/Jefernee/catalogo-personal-aws> (público)
 
@@ -55,8 +59,22 @@ Todo en **us-east-1**, cuenta `610156626281`, creada con usuario root.
 La suscripción de correo al tema de SNS quedó **pendiente de confirmar** (el correo de
 confirmación nunca llegó). No afecta la calificación: la alarma existe y está configurada.
 
-**Variables de entorno de la Lambda:** `TABLE_NAME` y `BUCKET_NAME`. Los nombres nunca
-van escritos en el código.
+**Variables de entorno de la Lambda:** `TABLE_NAME`, `BUCKET_NAME`, `TOKEN_PRINCIPAL` y
+`TOKEN_INVITADO`. Nada de eso va escrito en el código; las claves están en
+`DATOS-PRIVADOS.md`.
+
+## Acceso
+
+- Toda petición lleva `Authorization: Bearer <clave>`. Sin clave o con una inventada: **401**,
+  también en rutas que no existen (a quien no tiene clave no se le dice qué rutas hay).
+- `TOKEN_PRINCIPAL` es la del dueño; `TOKEN_INVITADO` la que se comparte. El invitado puede
+  **ver y editar todo** (decisión del dueño). Cambiar `TOKEN_INVITADO` revoca a los invitados.
+- Sin `TOKEN_PRINCIPAL` la API responde **503** a todo: falla cerrada.
+- La Lambda escribe el evento en CloudWatch con el header de la clave reemplazado por
+  `[oculto]`.
+- En la app, **Compartir** arma un mensaje de WhatsApp (`wa.me/?text=`) con el enlace de
+  invitado, la URL y la clave de invitado. Nunca la principal: hay pruebas que lo verifican.
+- CORS en API Gateway permite los headers `content-type` y `authorization`.
 
 ---
 
@@ -72,14 +90,15 @@ van escritos en el código.
 ## Estructura
 
 ```
-lambda_function.py      la función: router + 6 endpoints + export
+lambda_function.py      la función: acceso con clave + router + 6 endpoints + export
 iam-policy.json         política de mínimo privilegio (ya con cuenta y bucket reales)
 datos-prueba.json       10 registros de ejemplo
 cargar_datos.py         los carga por la API o por boto3
 demo.sh                 guion de la demo en vivo
 pruebas_e2e.py          16 verificaciones contra la API desplegada
-tests/                  51 pruebas con pytest + moto
-app/                    aplicación React + Vite (PWA instalable)
+tests/                  71 pruebas con pytest + moto
+servidor_local.py       la Lambda real contra AWS emulado, en localhost:8787
+app/                    aplicación React + Vite (PWA instalable), 63 pruebas con vitest
 frontend/index.html     la misma idea en un archivo, sin dependencias
 DESPLIEGUE.md           paso a paso en la consola de AWS
 PLAN-proyecto-final-modulo3.md   el plan contra la rúbrica
@@ -88,11 +107,16 @@ PLAN-proyecto-final-modulo3.md   el plan contra la rúbrica
 ## Comandos
 
 ```bash
-python -m pytest tests -q            # 51 pruebas locales
-python pruebas_e2e.py <URL_API>      # 16 verificaciones contra la API real
-python cargar_datos.py <URL_API>     # carga los 10 registros de ejemplo
-cd app && npm run dev                # app en localhost:5173
+python -m pytest tests -q                 # 71 pruebas de la Lambda
+cd app && npm test                        # 63 pruebas de la app
+python servidor_local.py                  # API local sin AWS, clave "local"
+python pruebas_e2e.py <URL_API> <CLAVE>   # 19 verificaciones contra la API real
+python cargar_datos.py <URL_API> <CLAVE>  # carga los 10 registros de ejemplo
+cd app && npm run dev                     # app en localhost:5173
 ```
+
+Probar la app sin tocar AWS: `python servidor_local.py` y abrir
+`http://localhost:5173/#api=http://localhost:8787&token=local&invitado=local-invitado`.
 
 La app toma la URL de la API de `app/.env.local`, que **no se sube a git** para que el
 build publicado no la lleve dentro. Sin ese archivo, la app la pide una vez y la guarda
@@ -147,14 +171,19 @@ workflow de `.github/workflows/pages.yml` y actualiza GitHub Pages.
 
 | Quiero… | Dónde se toca |
 |---|---|
-| Agregar un tipo (por ejemplo `podcast`) | `TIPOS_VALIDOS` en `lambda_function.py`, y `TIPOS` + `ICONOS` + `CAMPO_EXTRA` en `app/src/api.js`. Luego pegar la Lambda en la consola. |
+| Agregar un tipo (por ejemplo `podcast`) | `TIPOS_VALIDOS` en `lambda_function.py`, y `TIPOS` + `ETIQUETAS` + `ICONOS` + `CAMPO_EXTRA` en `app/src/api.js`. Luego pegar la Lambda en la consola. |
+| Agregar un fondo de página | `FONDOS_VALIDOS` en la Lambda, `FONDOS` en `app/src/api.js` y una clase `.fondo-<id>` en `styles.css`. |
+| Cambiar el nombre de la sección Listas | la constante `NOMBRE_LISTAS` en `app/src/App.jsx`. |
+| Cambiar el nombre del dueño | la constante `DUENO` en `app/src/api.js` (sale en la invitación y en el acceso). |
+| Cambiar el texto de la invitación | `mensajeInvitacion()` en `app/src/acceso.jsx`. |
 | Agregar un campo nuevo a los ítems | la lista de campos en `crear()` y la de `editables` en `actualizar()`, en `lambda_function.py`. DynamoDB no necesita cambios: no tiene esquema fijo. |
 | Cambiar un estado o su orden | `ESTADOS_VALIDOS` en la Lambda; `ESTADOS`, `SIGUIENTE_ESTADO` y `ACCION_ESTADO` en `app/src/api.js`. |
 | Agregar un endpoint | la función y el router en `lambda_function.py`, **y** la ruta en API Gateway → Rutas (si no existe la ruta, da 404 aunque el código esté bien). |
 | Cambiar colores o tipografía | los tokens al inicio de `app/src/styles.css`. Todo el resto los hereda, incluido el tema oscuro. |
 | Cambiar los permisos de la Lambda | `iam-policy.json` aquí, y pegarlo en IAM → Roles → `catalogo-personal-lambda-role` → política `catalogo-personal-permisos`. |
 | Permitir otro origen en el navegador | API Gateway → CORS. Recordar: el valor hay que escribirlo **y darle a Agregar**, si no, no se guarda. |
-| Cambiar la URL de la API en la app | `app/.env.local` (local), el engrane dentro de la app, o abrir la app con `#api=<url>` al final del enlace. |
+| Cambiar la URL de la API en la app | `app/.env.local` (local), o abrir la app con `#api=<url>&token=<clave>` al final del enlace. |
+| Quitarle el acceso a un invitado | cambiar `TOKEN_INVITADO` en la Lambda (ver el final de `DESPLIEGUE.md`). |
 
 **Antes de dar por bueno un cambio:**
 
@@ -169,7 +198,9 @@ python pruebas_e2e.py <url>        # la API real, ya desplegada
 - **403** — API Gateway no tiene permiso para invocar la Lambda.
 - **404 desde la app** — la ruta no existe en API Gateway, o la pantalla quedó
   desactualizada (la app recarga sola en ese caso).
-- **"No se pudo conectar" en el navegador** — casi siempre CORS.
+- **401** — falta la clave o es incorrecta. **503** — la Lambda no tiene `TOKEN_PRINCIPAL`.
+- **"No se pudo conectar" en el navegador** — o no hay internet (la app lo dice), o CORS no
+  permite el header `authorization`.
 - El traceback completo de cualquier error está en **CloudWatch Logs**, nunca en la
   pantalla de Lambda.
 
@@ -181,8 +212,7 @@ python pruebas_e2e.py <url>        # la API real, ya desplegada
       Mel gestor de tareas, Dani tracker de hábitos, Andrés reservaciones, Joan inventario.
 - [ ] Llenar el catálogo con datos reales antes de la demo (mínimo 5).
 - [ ] Ensayar los 10-15 minutos: intro, diagrama, demo en vivo, una decisión, preguntas.
-- [ ] Opcional (bonus, $0): API Key en API Gateway, GSI por `tipo`+`estado`, Pulumi.
-- [ ] La API es **pública y sin autenticación**. Para uso diario conviene la API Key.
+- [ ] Opcional (bonus, $0): GSI por `tipo`+`estado`, Pulumi, tope de peticiones en la etapa.
 
 **No borrar nada de AWS hasta después de presentar.** El orden de limpieza, si algún día
 se decide, está al final de `DESPLIEGUE.md`.

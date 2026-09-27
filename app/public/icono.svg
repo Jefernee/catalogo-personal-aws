@@ -1,6 +1,53 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#2563eb"/>
-  <rect x="136" y="120" width="70" height="272" rx="12" fill="#ffffff" opacity="0.95"/>
-  <rect x="222" y="160" width="70" height="232" rx="12" fill="#ffffff" opacity="0.75"/>
-  <rect x="308" y="200" width="70" height="192" rx="12" fill="#ffffff" opacity="0.55"/>
+  <defs>
+    <linearGradient id="tapa" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6275f5"/>
+      <stop offset="0.55" stop-color="#4459e8"/>
+      <stop offset="1" stop-color="#3a2b9c"/>
+    </linearGradient>
+    <linearGradient id="hoja" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fffdf7"/>
+      <stop offset="1" stop-color="#f2e9d6"/>
+    </linearGradient>
+    <linearGradient id="lomo" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#000" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#6b5a3a" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="brillo" cx="0.25" cy="0.15" r="0.9">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="116" fill="url(#tapa)"/>
+  <rect width="512" height="512" rx="116" fill="url(#brillo)"/>
+
+  <!-- Grosor de las hojas por debajo -->
+  <path d="M98 196 C152 178 214 184 256 214 C298 184 360 178 414 196 L414 378
+           C360 364 298 368 256 396 C214 368 152 364 98 378 Z" fill="#d8c9a8"/>
+
+  <!-- Páginas abiertas -->
+  <path d="M110 182 C160 166 216 172 256 202 L256 380 C216 352 160 346 110 360 Z" fill="url(#hoja)"/>
+  <path d="M402 182 C352 166 296 172 256 202 L256 380 C296 352 352 346 402 360 Z" fill="url(#hoja)"/>
+
+  <!-- Sombra del lomo -->
+  <rect x="226" y="196" width="60" height="190" fill="url(#lomo)"/>
+
+  <!-- Renglones escritos -->
+  <g fill="none" stroke="#b7a684" stroke-width="10" stroke-linecap="round" opacity="0.75">
+    <path d="M142 226 C172 218 200 220 226 232"/>
+    <path d="M142 264 C172 256 200 258 226 270"/>
+    <path d="M142 302 C164 296 184 297 202 304"/>
+    <path d="M370 226 C340 218 312 220 286 232"/>
+    <path d="M370 264 C340 256 312 258 286 270"/>
+  </g>
+
+  <!-- Cinta marcapáginas -->
+  <path d="M318 168 L346 164 L346 418 L332 402 L318 418 Z" fill="#f5a623"/>
+  <path d="M318 168 L346 164 L346 176 L318 180 Z" fill="#d88c12"/>
+
+  <!-- Destello -->
+  <path d="M404 96 C406 116 412 122 432 124 C412 126 406 132 404 152 C402 132 396 126 376 124 C396 122 402 116 404 96 Z"
+        fill="#fff" opacity="0.9"/>
 </svg>

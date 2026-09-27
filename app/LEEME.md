@@ -56,6 +56,20 @@ para otra computadora o para el día de la demo.
 Quien abra la página sin esa parte final solo ve la pantalla de conexión — por eso la
 URL no viaja dentro del build publicado.
 
+## Pruebas
+
+```bash
+npm test           # 63 pruebas con vitest: sesión, enlaces, invitación, libro, app completa
+```
+
+Para probarla contra la Lambda real sin tocar AWS, desde la raíz del proyecto:
+
+```bash
+python servidor_local.py
+```
+
+y abrir `http://localhost:5173/#api=http://localhost:8787&token=local&invitado=local-invitado`.
+
 ## Compilar
 
 ```bash
@@ -69,13 +83,20 @@ npm run preview    # sirve dist/ para revisarlo
 
 ## Qué hace
 
-- **Métricas** arriba: total, pendientes, en curso, terminados y rating promedio.
-- **Catálogo** en tarjetas: buscar por título, filtrar por tipo y estado, avanzar el estado con un clic, calificar con estrellas cuando algo queda terminado, **editar** cualquier campo y borrar.
-- **Diario** en su propia pestaña, con fecha y contenido, también editable.
-- **Exportar**: dispara `POST /export` y avisa cuántos registros subió a S3 y con qué nombre. Desde la pestaña del diario exporta el diario (`?tipo=diario`).
-- **Instalable**: en Chrome/Edge aparece el icono de instalar en la barra de direcciones; en el celular, "Agregar a pantalla de inicio". Requiere servirla por HTTPS (en `localhost` funciona para probar, pero el service worker solo se registra bajo HTTPS).
-
-Las actualizaciones se pintan de inmediato y se revierten solas si la API responde error.
+- **Acceso con clave.** Sin clave no se ve nada. El campo de la clave es de contraseña, así
+  que Bitwarden ofrece guardarla y rellenarla. Con el enlace `#api=…&token=…` se entra directo.
+- **Diario como libro.** La página más reciente primero; en escritorio se ven dos páginas
+  abiertas y en el celular una, que se pasa deslizando el dedo. Cada página tiene su fondo:
+  papel, crema, rayado, cuadrícula, lino, rosa, menta, cielo, lavanda o noche. El editor
+  escribe directamente sobre la hoja elegida.
+- **Listas.** Tareas y compras (se tachan al marcarlas hechas o compradas) y lo que se lee,
+  ve o escucha, con estado y estrellas. Búsqueda y filtros por tipo y estado.
+- **Compartir.** Arma una invitación para WhatsApp —qué es el diario, cómo entrar paso a paso
+  y los datos de acceso— y deja elegir el contacto. Lleva la clave de invitado, nunca la tuya.
+- **Ajustes.** Tema según el teléfono, claro u oscuro; descargar una copia de todo en JSON o
+  guardarla en S3; cerrar sesión en el dispositivo.
+- **Pensada para el celular.** Los formularios ocupan la pantalla con el botón de guardar
+  arriba, y se ajustan al teclado para que nunca lo tape. Instalable como app.
 
 ---
 
@@ -86,11 +107,16 @@ app/
 ├── index.html
 ├── public/           manifest, service worker, iconos
 └── src/
-    ├── api.js        cliente de la API y catálogos de valores
-    ├── App.jsx       estado, carga de datos y acciones
-    ├── componentes.jsx  tarjetas, filtros, métricas, modales
-    ├── styles.css    tokens de color, claro y oscuro, responsivo
-    └── main.jsx
+    ├── api.js           cliente de la API, sesión, enlaces y catálogos de valores
+    ├── App.jsx          estado, carga de datos y acciones
+    ├── acceso.jsx       login, compartir (invitación de WhatsApp) y ajustes
+    ├── diario.jsx       el libro y el editor de página
+    ├── componentes.jsx  tarjetas, filtros, métricas y el formulario de las listas
+    ├── hoja.jsx         la hoja de los formularios y el ajuste al teclado del celular
+    ├── iconos.jsx       iconos SVG
+    ├── styles.css       tokens de color, claro y oscuro, fondos de página, responsivo
+    ├── main.jsx
+    └── pruebas/         pruebas con vitest y Testing Library
 ```
 
 Sin librerías de UI ni de estado: React y CSS.
@@ -99,4 +125,6 @@ Sin librerías de UI ni de estado: React y CSS.
 
 ## Nota de seguridad
 
-La API es pública y sin autenticación: cualquiera con la URL puede leer y escribir. Para uso diario conviene protegerla con una **API Key** en API Gateway, que además es uno de los bonus del proyecto y cuesta $0.
+La clave vive en el `localStorage` del navegador. "Cerrar sesión" en Ajustes la borra del
+dispositivo. Para quitarle el acceso a alguien a quien le compartiste el enlace, se cambia
+`TOKEN_INVITADO` en la Lambda.

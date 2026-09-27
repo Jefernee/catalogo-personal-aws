@@ -188,3 +188,42 @@ En este orden:
 4. Log Group y rol IAM
 
 (Si usaste el bonus de ECS/Fargate, ese va **primero**: es lo único que cobra por hora.)
+
+---
+
+## 11 · Acceso con clave
+
+Desde el 26/09/2026 la API exige una clave en cada petición (`Authorization: Bearer <clave>`).
+Las claves reales están en `DATOS-PRIVADOS.md`, que no se sube a git.
+
+**El orden importa.** Los pasos 1 y 2 no cambian nada visible: la Lambda vieja ignora las
+variables y el header nuevo. El paso 3 es el que enciende el candado.
+
+1. **Variables de entorno.** Lambda → `catalogo-personal-api` → Configuración → Variables de
+   entorno → Editar → agregar `TOKEN_PRINCIPAL` y `TOKEN_INVITADO` → Guardar.
+2. **CORS.** API Gateway → `catalogo-personal-api` → CORS → Configurar → en
+   *Access-Control-Allow-Headers* escribir `authorization` **y darle a Agregar** (junto a
+   `content-type`) → Guardar. Sin esto el navegador bloquea toda petición con clave.
+3. **Código.** Lambda → pestaña Código → pegar `lambda_function.py` completo → Deploy.
+4. **Comprobar:** `python pruebas_e2e.py <URL_API> <TOKEN_PRINCIPAL>` — las primeras tres
+   verificaciones confirman que sin clave, o con una inventada, la API responde 401.
+
+**Tope de peticiones (opcional, $0).** API Gateway → Etapas → `$default` → Limitación →
+velocidad `10` y ráfaga `20`. Aunque alguien martillee la URL sin clave, no puede pasar de
+ahí: es un seguro contra cobros.
+
+### Revocar accesos
+
+| Quiero… | Hago |
+|---|---|
+| Quitarle el acceso a quien le compartí el enlace | Cambiar `TOKEN_INVITADO` en la Lambda. Tu clave sigue igual. |
+| Cortar todo, incluido mi acceso actual | Cambiar `TOKEN_PRINCIPAL` y actualizar el enlace en Bitwarden. |
+
+Una clave nueva se genera con:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+Si se borra `TOKEN_PRINCIPAL` por error, la API responde 503 a todo: **falla cerrada**, nunca
+queda abierta.

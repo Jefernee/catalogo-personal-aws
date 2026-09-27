@@ -6,13 +6,15 @@ Estas corren contra la API de verdad: validan lo que el emulador no puede
 ver -- que API Gateway este conectado, que el rol IAM tenga los permisos,
 que el archivo llegue al bucket.
 
-    python pruebas_e2e.py https://TU-ID.execute-api.us-east-1.amazonaws.com/dev
+    python pruebas_e2e.py <URL_DE_LA_API> <CLAVE>
 
+La clave tambien puede ir en la variable de entorno CATALOGO_TOKEN.
 Solo usa la libreria estandar: no necesita instalar nada.
-Crea y elimina sus propios registros; no toca los de tu demo.
+Crea y elimina sus propios registros; no toca los tuyos.
 """
 
 import json
+import os
 import sys
 import urllib.error
 import urllib.request
@@ -20,12 +22,16 @@ import urllib.request
 VERDE, ROJO, GRIS, FIN = "\033[92m", "\033[91m", "\033[90m", "\033[0m"
 
 resultados = []
+CLAVE = ""
 
 
-def pedir(metodo, url, cuerpo=None):
+def pedir(metodo, url, cuerpo=None, clave=None):
     datos = json.dumps(cuerpo).encode() if cuerpo is not None else None
-    peticion = urllib.request.Request(url, data=datos, method=metodo,
-                                      headers={"Content-Type": "application/json"})
+    headers = {"Content-Type": "application/json"}
+    clave = CLAVE if clave is None else clave
+    if clave:
+        headers["Authorization"] = f"Bearer {clave}"
+    peticion = urllib.request.Request(url, data=datos, method=metodo, headers=headers)
     try:
         with urllib.request.urlopen(peticion, timeout=30) as r:
             return r.status, json.loads(r.read() or "{}")
@@ -49,9 +55,23 @@ def main(base):
     base = base.rstrip("/")
     print(f"\nProbando {base}\n")
 
+    # 0. Sin clave no entra nadie
+    status, _ = pedir("GET", f"{base}/catalogo", clave="")
+    probar("Sin clave responde 401", status == 401, f"status={status}")
+    status, _ = pedir("POST", f"{base}/catalogo", {"titulo": "intruso"}, clave="")
+    probar("Sin clave no se puede escribir", status == 401, f"status={status}")
+    status, _ = pedir("GET", f"{base}/catalogo", clave="clave-inventada")
+    probar("Una clave inventada responde 401", status == 401, f"status={status}")
+
     # 1. La API responde
     status, cuerpo = pedir("GET", f"{base}/catalogo")
     probar("GET /catalogo responde 200", status == 200, f"status={status}")
+    if status == 401:
+        print(f"\n{ROJO}La clave no es valida. Revisa TOKEN_PRINCIPAL en la Lambda.{FIN}")
+        return 1
+    if status == 503:
+        print(f"\n{ROJO}La Lambda no tiene TOKEN_PRINCIPAL configurado.{FIN}")
+        return 1
     if status != 200:
         print(f"\n{ROJO}La API no responde. Revisa la Invoke URL y que el stage este desplegado.{FIN}")
         if status == 502:
@@ -140,7 +160,11 @@ def main(base):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
+    if len(sys.argv) not in (2, 3):
         print(__doc__)
+        sys.exit(2)
+    CLAVE = sys.argv[2] if len(sys.argv) == 3 else os.environ.get("CATALOGO_TOKEN", "")
+    if not CLAVE:
+        print("Falta la clave: pasala como segundo argumento o en CATALOGO_TOKEN.")
         sys.exit(2)
     sys.exit(main(sys.argv[1]))
