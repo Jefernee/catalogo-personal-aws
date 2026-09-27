@@ -9,7 +9,7 @@ necesita credenciales.
     python servidor_local.py
 
 API local:   http://localhost:8787
-Clave:       local            (se cambia con CATALOGO_TOKEN)
+Clave:       local            (se cambia con CATALOGO_TOKEN_LOCAL)
 
 Para usarla desde la app en desarrollo, abrela asi:
 
@@ -26,7 +26,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qsl, urlsplit
 
 PUERTO = int(os.environ.get("PUERTO", "8787"))
-CLAVE = os.environ.get("CATALOGO_TOKEN", "local")
+CLAVE = os.environ.get("CATALOGO_TOKEN_LOCAL", "local")
 TABLA = "catalogo-personal-local"
 BUCKET = "catalogo-personal-local"
 

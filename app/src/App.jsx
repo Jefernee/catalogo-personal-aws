@@ -1,9 +1,18 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { ErrorApi, api, cerrarSesion, leerToken, leerUrl, tomarDatosDelEnlace } from "./api";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ErrorApi,
+  api,
+  cerrarSesion,
+  debeBloquearse,
+  leerToken,
+  leerUrl,
+  marcarOculta,
+  tomarDatosDelEnlace,
+} from "./api";
 import { ModalAjustes, ModalCompartir, PantallaAcceso } from "./acceso";
 import { Filtros, Metricas, ModalItem, Tarjeta } from "./componentes";
 import { EditorPagina, Libro } from "./diario";
-import { Alerta, Check, Compartir, Engrane, Mas, Recargar } from "./iconos";
+import { Alerta, Candado, Check, Compartir, Engrane, Mas, Recargar } from "./iconos";
 
 // Nombre de la sección de tareas, compras, libros y demás. Cambiarlo aquí basta.
 export const NOMBRE_LISTAS = "Listas";
@@ -55,8 +64,23 @@ export default function App() {
     return () => clearTimeout(t);
   }, [brindis]);
 
-  /** Sale a la pantalla de acceso. Se usa al cerrar sesión y cuando la clave dejó de valer. */
+  // Lo que se está escribiendo en un formulario abierto. Si la app se bloquea
+  // a media edición, se guarda aquí (solo en memoria, nunca en disco) y el
+  // formulario se reabre tal cual al volver a entrar.
+  const modalRef = useRef(null);
+  const borrador = useRef(null);
+  const pendiente = useRef(null);
+  useEffect(() => {
+    modalRef.current = modal;
+    if (!modal) borrador.current = null;
+  }, [modal]);
+
+  /** Bloquea: vuelve a la pantalla de acceso y olvida la clave de este dispositivo. */
   const expulsar = useCallback((aviso = "") => {
+    const abierto = modalRef.current;
+    if (abierto && (abierto.tipo === "item" || abierto.tipo === "pagina") && borrador.current) {
+      pendiente.current = { modal: abierto, datos: borrador.current };
+    }
     cerrarSesion();
     setItems([]);
     setModal(null);
@@ -80,6 +104,24 @@ export default function App() {
   useEffect(() => {
     if (conSesion) cargar();
   }, [conSesion, cargar]);
+
+  // Bloqueo por inactividad: si la app estuvo más de 3 minutos sin verse, al
+  // volver pide la clave. Salir un momento a otra app no la bloquea. Se revisa
+  // también al abrir, por si el navegador restauró la pestaña con la sesión dentro.
+  useEffect(() => {
+    if (!conSesion) return undefined;
+    const bloquear = () => expulsar("Se bloqueó por seguridad: pasaron más de 3 minutos fuera de la app.");
+    if (debeBloquearse()) {
+      bloquear();
+      return undefined;
+    }
+    const alCambiarVisibilidad = () => {
+      if (document.visibilityState === "hidden") marcarOculta();
+      else if (debeBloquearse()) bloquear();
+    };
+    document.addEventListener("visibilitychange", alCambiarVisibilidad);
+    return () => document.removeEventListener("visibilitychange", alCambiarVisibilidad);
+  }, [conSesion, expulsar]);
 
   // Abrir un enlace de acceso con la app ya abierta en esa pestaña no recarga
   // la página: solo cambia lo que va después del "#". Se escucha ese cambio.
@@ -191,6 +233,12 @@ export default function App() {
         alEntrar={() => {
           setAvisoAcceso("");
           setConSesion(true);
+          // Si se bloqueó con un formulario a medias, se reabre con lo escrito.
+          if (pendiente.current) {
+            const { modal: anterior, datos } = pendiente.current;
+            pendiente.current = null;
+            setModal({ ...anterior, datosIniciales: datos });
+          }
         }}
       />
     );
@@ -229,6 +277,15 @@ export default function App() {
             onClick={() => setModal({ tipo: "ajustes" })}
           >
             <Engrane />
+          </button>
+          <button
+            type="button"
+            className="btn btn--sutil btn--icono"
+            title="Bloquear: vuelve a pedir la clave"
+            aria-label="Bloquear"
+            onClick={() => expulsar("Bloqueado. Entra con tu clave.")}
+          >
+            <Candado />
           </button>
           <button
             type="button"
@@ -317,9 +374,14 @@ export default function App() {
         )}
       </main>
 
-      <button type="button" className="btn btn--primario flotante" onClick={nuevo}>
-        <Mas width={17} height={17} />
-        {pestana === "diario" ? "Nueva página" : "Agregar"}
+      <button
+        type="button"
+        className="btn btn--primario flotante"
+        onClick={nuevo}
+        aria-label={pestana === "diario" ? "Nueva página" : "Agregar"}
+      >
+        <Mas width={18} height={18} />
+        <span className="etiqueta-flotante">{pestana === "diario" ? "Nueva página" : "Agregar"}</span>
       </button>
 
       {modal?.tipo === "item" && (
@@ -327,6 +389,8 @@ export default function App() {
           key={modal.item?.item_id || "nuevo"}
           item={modal.item}
           tipoInicial={modal.tipoInicial}
+          datosIniciales={modal.datosIniciales}
+          alCambiar={(d) => (borrador.current = d)}
           alCerrar={() => setModal(null)}
           alGuardar={guardar}
         />
@@ -335,6 +399,8 @@ export default function App() {
         <EditorPagina
           key={modal.item?.item_id || "nueva"}
           item={modal.item}
+          datosIniciales={modal.datosIniciales}
+          alCambiar={(d) => (borrador.current = d)}
           alCerrar={() => setModal(null)}
           alGuardar={guardar}
         />
@@ -342,7 +408,7 @@ export default function App() {
       {modal?.tipo === "ajustes" && (
         <ModalAjustes
           alCerrar={() => setModal(null)}
-          alSalir={() => expulsar("")}
+          alSalir={() => expulsar("Bloqueado. Entra con tu clave.")}
           tema={tema}
           alElegirTema={setTema}
           items={items}

@@ -98,17 +98,6 @@ def autorizado(event):
                      headers={"WWW-Authenticate": "Bearer"})
 
 
-def para_el_log(event):
-    """Copia del evento sin la clave: el evento completo se escribe en
-    CloudWatch, y la clave no debe quedar en los logs."""
-    copia = dict(event)
-    headers = dict(copia.get("headers") or {})
-    for k in list(headers):
-        if k.lower() == "authorization":
-            headers[k] = "[oculto]"
-    copia["headers"] = headers
-    return copia
-
 
 def ahora():
     return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
@@ -257,7 +246,10 @@ def exportar(params):
     else:
         items = escanear(FilterExpression=Attr("tipo").ne("diario"))
 
-    key = f"exports/export-{datetime.now(timezone.utc):%Y-%m-%d}.json"
+    # El nombre lleva qué se exportó y cuándo: dos exports seguidos (el catálogo y
+    # el diario, por ejemplo) no se pisan el uno al otro.
+    que = "catalogo" if not tipo else "".join(c for c in tipo if c.isalnum())[:20] or "otro"
+    key = f"exports/{que}-{datetime.now(timezone.utc):%Y-%m-%d_%H-%M-%S}.json"
 
     s3.put_object(
         Bucket=BUCKET_NAME,
@@ -278,20 +270,25 @@ def exportar(params):
 # --------------------------------------------------------------------------
 
 def lambda_handler(event, context):
-    print(f"Evento recibido: {json.dumps(para_el_log(event))}")  # la mejor herramienta de debug
+    # HTTP API (payload v2) y, por si acaso, REST API (v1).
+    contexto_http = event.get("requestContext", {}).get("http", {})
+    metodo = contexto_http.get("method") or event.get("httpMethod", "")
+    ruta = (contexto_http.get("path") or event.get("path", "")).rstrip("/")
 
+    # En CloudWatch queda solo qué se pidió y cómo salió: nunca el cuerpo (ahí va
+    # el texto del diario) ni los headers (ahí va la clave).
+    respuesta = atender(event, metodo, ruta)
+    print(f"{metodo} {ruta[:120]} -> {respuesta['statusCode']}")
+    return respuesta
+
+
+def atender(event, metodo, ruta):
     try:
         # El acceso se revisa antes que nada, incluso antes de saber si la ruta
         # existe: a quien no tiene clave no se le dice ni que rutas hay.
         rechazo = autorizado(event)
         if rechazo:
             return rechazo
-
-        # HTTP API (payload v2) y, por si acaso, REST API (v1).
-        contexto_http = event.get("requestContext", {}).get("http", {})
-        metodo = contexto_http.get("method") or event.get("httpMethod", "")
-        ruta = contexto_http.get("path") or event.get("path", "")
-        ruta = ruta.rstrip("/")
 
         params = event.get("queryStringParameters") or {}
         segmentos = [s for s in ruta.split("/") if s]
@@ -340,6 +337,6 @@ def lambda_handler(event, context):
 
         return responder(404, {"error": f"Ruta no encontrada: {metodo} {ruta}"})
 
-    except Exception as error:  # el traceback completo queda en CloudWatch Logs
-        print(f"ERROR: {type(error).__name__}: {error}")
+    except Exception as error:  # el detalle queda en CloudWatch Logs
+        print(f"ERROR en {metodo} {ruta[:120]}: {type(error).__name__}: {error}")
         return responder(500, {"error": "Error interno", "detalle": str(error)})

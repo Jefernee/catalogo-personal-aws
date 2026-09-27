@@ -1,9 +1,10 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
-import { tomarDatosDelEnlace } from "./api";
+import { migrarSesionAntigua, tomarDatosDelEnlace } from "./api";
 import "./styles.css";
 
+migrarSesionAntigua();   // las claves ya no se guardan para siempre
 tomarDatosDelEnlace();   // antes de pintar, por si la sesión viene en el enlace
 
 createRoot(document.getElementById("root")).render(

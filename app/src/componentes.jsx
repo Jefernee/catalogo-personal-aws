@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   CAMPO_EXTRA,
   ESTADOS,
@@ -169,11 +169,13 @@ export function Metricas({ items }) {
   );
 }
 
-export function ModalItem({ alCerrar, alGuardar, item, tipoInicial = "tarea" }) {
+export function ModalItem({ alCerrar, alGuardar, item, tipoInicial = "tarea", datosIniciales, alCambiar }) {
   const editando = Boolean(item);
   const [enviando, setEnviando] = useState(false);
   const [datos, setDatos] = useState(() =>
-    item
+    datosIniciales
+      ? datosIniciales
+      : item
       ? {
           titulo: item.titulo || "",
           tipo: item.tipo,
@@ -185,6 +187,11 @@ export function ModalItem({ alCerrar, alGuardar, item, tipoInicial = "tarea" }) 
   );
 
   const campoExtra = CAMPO_EXTRA[datos.tipo];
+
+  // Cada cambio se le avisa a la app: si se bloquea a media edición, no se pierde.
+  useEffect(() => {
+    alCambiar?.(datos);
+  }, [datos, alCambiar]);
 
   async function enviar(e) {
     e.preventDefault();

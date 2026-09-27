@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { EditorPagina, Libro } from "../diario";
+import { EditorPagina, HojaDiario, Libro, aRenglones, contarHojas, repartirEnHojas } from "../diario";
 import { simularPantalla } from "./pantalla";
 
 const pagina = (n, dia) => ({
@@ -160,5 +160,67 @@ describe("editor de página", () => {
     render(<EditorPagina alCerrar={alCerrar} alGuardar={vi.fn()} />);
     fireEvent.keyDown(window, { key: "Escape" });
     expect(alCerrar).toHaveBeenCalled();
+  });
+});
+
+describe("hojas: una nota larga continúa en la siguiente", () => {
+  it("cuenta cuántas columnas del ancho de la hoja ocupó el texto", () => {
+    // Columnas de 400 px separadas por 60 px: 1 hoja = 400, 3 hojas = 400*3 + 60*2.
+    expect(contarHojas(400, 400)).toBe(1);
+    expect(contarHojas(400 * 3 + 60 * 2, 400)).toBe(3);
+    // Sin medidas (antes de maquetar) siempre hay al menos una hoja.
+    expect(contarHojas(0, 0)).toBe(1);
+  });
+
+  it("reparte cada nota en sus hojas, en orden", () => {
+    const hojas = repartirEnHojas([pagina(2, 10), pagina(1, 5)], { p2: { total: 3 } });
+    expect(hojas.map((h) => `${h.entrada.item_id}:${h.parte}/${h.total}`)).toEqual([
+      "p2:0/3", "p2:1/3", "p2:2/3", "p1:0/1",
+    ]);
+  });
+
+  it("el alto del texto se redondea a renglones completos", () => {
+    expect(aRenglones(455)).toBe(450);
+    expect(aRenglones(480)).toBe(480);
+    expect(aRenglones(50)).toBe(120); // nunca menos de 4 renglones
+  });
+
+  it("la primera hoja lleva la fecha; las siguientes, 'continuación'", () => {
+    const nota = pagina(1, 5);
+    const { rerender } = render(
+      <HojaDiario hoja={{ entrada: nota, parte: 0, total: 3 }} numero={1} lado="sola"
+        alEditar={vi.fn()} alBorrar={vi.fn()} />
+    );
+    expect(document.querySelector("time")).toBeInTheDocument();
+    expect(screen.getByText(/continúa/)).toBeInTheDocument();
+
+    rerender(
+      <HojaDiario hoja={{ entrada: nota, parte: 2, total: 3 }} numero={3} lado="sola"
+        alEditar={vi.fn()} alBorrar={vi.fn()} />
+    );
+    expect(screen.getByText("Página 1 · continuación")).toBeInTheDocument();
+    // La última hoja de la nota ya no dice "continúa".
+    expect(screen.queryByText(/continúa/)).not.toBeInTheDocument();
+  });
+
+  it("una hoja de continuación muestra su trozo desplazando el texto", () => {
+    render(
+      <HojaDiario hoja={{ entrada: pagina(1, 5), parte: 2, total: 3 }} numero={3} lado="sola"
+        medida={{ total: 3, ancho: 400, alto: 450 }} alEditar={vi.fn()} alBorrar={vi.fn()} />
+    );
+    const flujo = document.querySelector(".hoja-flujo");
+    expect(flujo.style.transform).toBe("translateX(-920px)"); // 2 × (400 + 60)
+    expect(flujo).toHaveAttribute("aria-hidden", "true"); // el lector de pantalla la lee una vez
+  });
+
+  it("editar desde cualquier hoja abre la nota completa", async () => {
+    const alEditar = vi.fn();
+    const nota = pagina(1, 5);
+    render(
+      <HojaDiario hoja={{ entrada: nota, parte: 1, total: 2 }} numero={2} lado="sola"
+        alEditar={alEditar} alBorrar={vi.fn()} />
+    );
+    await userEvent.click(screen.getByLabelText("Editar Página 1"));
+    expect(alEditar).toHaveBeenCalledWith(nota);
   });
 });

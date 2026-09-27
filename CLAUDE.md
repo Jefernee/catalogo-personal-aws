@@ -70,8 +70,15 @@ confirmación nunca llegó). No afecta la calificación: la alarma existe y est�
 - `TOKEN_PRINCIPAL` es la del dueño; `TOKEN_INVITADO` la que se comparte. El invitado puede
   **ver y editar todo** (decisión del dueño). Cambiar `TOKEN_INVITADO` revoca a los invitados.
 - Sin `TOKEN_PRINCIPAL` la API responde **503** a todo: falla cerrada.
-- La Lambda escribe el evento en CloudWatch con el header de la clave reemplazado por
-  `[oculto]`.
+- En CloudWatch queda solo `MÉTODO /ruta -> estado` por petición: ni el cuerpo (ahí va el
+  texto del diario) ni los headers (ahí va la clave).
+- **La clave queda atada a su servidor:** si un enlace cambia la dirección de la API, la app
+  pregunta mostrando a dónde lleva, y aunque se acepte olvida las claves anteriores. Así un
+  enlace malicioso no puede llevarse tu clave a otro servidor.
+- En el navegador, las claves viven en `sessionStorage` (se borran al cerrar la app) y la
+  app se bloquea tras **3 minutos** fuera de ella (`BLOQUEO_MS` en `app/src/api.js`). El
+  candado del encabezado bloquea al instante. Si se bloquea con un formulario abierto, lo
+  escrito se conserva en memoria y el formulario se reabre al volver a entrar.
 - En la app, **Compartir** arma un mensaje de WhatsApp (`wa.me/?text=`) con el enlace de
   invitado, la URL y la clave de invitado. Nunca la principal: hay pruebas que lo verifican.
 - CORS en API Gateway permite los headers `content-type` y `authorization`.
@@ -96,9 +103,9 @@ datos-prueba.json       10 registros de ejemplo
 cargar_datos.py         los carga por la API o por boto3
 demo.sh                 guion de la demo en vivo
 pruebas_e2e.py          16 verificaciones contra la API desplegada
-tests/                  71 pruebas con pytest + moto
+tests/                  75 pruebas con pytest + moto
 servidor_local.py       la Lambda real contra AWS emulado, en localhost:8787
-app/                    aplicación React + Vite (PWA instalable), 63 pruebas con vitest
+app/                    aplicación React + Vite (PWA instalable), 81 pruebas con vitest
 frontend/index.html     la misma idea en un archivo, sin dependencias
 DESPLIEGUE.md           paso a paso en la consola de AWS
 PLAN-proyecto-final-modulo3.md   el plan contra la rúbrica
@@ -107,8 +114,8 @@ PLAN-proyecto-final-modulo3.md   el plan contra la rúbrica
 ## Comandos
 
 ```bash
-python -m pytest tests -q                 # 71 pruebas de la Lambda
-cd app && npm test                        # 63 pruebas de la app
+python -m pytest tests -q                 # 75 pruebas de la Lambda
+cd app && npm test                        # 81 pruebas de la app
 python servidor_local.py                  # API local sin AWS, clave "local"
 python pruebas_e2e.py <URL_API> <CLAVE>   # 19 verificaciones contra la API real
 python cargar_datos.py <URL_API> <CLAVE>  # carga los 10 registros de ejemplo
@@ -150,11 +157,14 @@ retención de logs distinta de "nunca vence".
 - **`scan` con `FilterExpression`, no GSI.** El proyecto acepta el scan; el GSI es bonus y
   además es la respuesta a "¿y si mañana hay 10 000 usuarios?".
 - **El diario queda fuera del export** salvo que se pida con `?tipo=diario`. Cumple el
-  requisito tal cual está escrito y no sube entradas personales a S3 sin pedirlo.
+  requisito tal cual está escrito y no sube entradas personales a S3 sin pedirlo. Cada
+  export se llama `exports/<catalogo|diario>-<fecha>_<hora>.json`, así dos seguidos no se pisan.
 - **Floats convertidos a `Decimal`**: DynamoDB no acepta float, y un rating de 4.5 hacía
   fallar la API.
 - **`scan` paginado** con `LastEvaluatedKey`: sin eso, con volumen alto el listado y el
   export salían incompletos en silencio.
+- **Las notas largas se parten en hojas** como en un libro: cada nota se maqueta en columnas
+  del tamaño de la hoja (`diario.jsx`, `useMedidas`) y cada hoja muestra una columna.
 - **Estilo del código y de la interfaz en español**, igual que el resto del proyecto.
 
 ---

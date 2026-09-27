@@ -22,8 +22,10 @@ describe("mensaje de invitación", () => {
   it("trae el paso a paso y todo lo necesario para entrar", () => {
     expect(mensaje).toContain("Cómo entrar");
     expect(mensaje).toContain("https://x/#api=a&token=t");
-    expect(mensaje).toContain(`Servidor: ${API}`);
+    expect(mensaje).toContain(`Servidor (solo si te lo pide): ${API}`);
     expect(mensaje).toContain("Clave: t");
+    // Avisa que la app pide la clave otra vez, para que no se quede afuera.
+    expect(mensaje).toMatch(/cada vez que la abras te pedirá la clave/);
     expect(mensaje).toMatch(/pantalla de inicio/);
   });
 
@@ -119,5 +121,25 @@ describe("compartir", () => {
     render(<ModalCompartir alCerrar={() => {}} avisar={() => {}} />);
     expect(screen.queryByRole("link", { name: /whatsapp/i })).not.toBeInTheDocument();
     expect(screen.getByLabelText("Clave de invitado")).toBeInTheDocument();
+  });
+});
+
+describe("clave de invitado", () => {
+  it("no acepta la clave principal, aunque el gestor de contraseñas la rellene", async () => {
+    guardarSesion({ url: API, token: "mi-principal" });
+    const avisar = vi.fn();
+    render(<ModalCompartir alCerrar={() => {}} avisar={avisar} />);
+
+    await userEvent.type(screen.getByLabelText("Clave de invitado"), "mi-principal");
+    await userEvent.click(screen.getByRole("button", { name: "Guardar" }));
+
+    expect(avisar).toHaveBeenCalledWith(expect.stringMatching(/principal/), "error");
+    expect(screen.queryByRole("link", { name: /whatsapp/i })).not.toBeInTheDocument();
+  });
+
+  it("el campo pide al gestor que no rellene la clave guardada", () => {
+    guardarSesion({ url: API, token: "p" });
+    render(<ModalCompartir alCerrar={() => {}} avisar={() => {}} />);
+    expect(screen.getByLabelText("Clave de invitado")).toHaveAttribute("autocomplete", "new-password");
   });
 });

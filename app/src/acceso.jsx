@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { DUENO, ErrorApi, api, enlaceInvitado, guardarSesion, hoyIso, leerInvitado, leerUrl } from "./api";
+import { DUENO, ErrorApi, api, enlaceInvitado, guardarSesion, hoyIso, leerInvitado, leerToken, leerUrl } from "./api";
 import { Hoja } from "./hoja";
-import { Candado, Compartir, Copiar, Descargar, Luna, Nube, Salir, Sol, WhatsApp } from "./iconos";
+import { Candado, Compartir, Copiar, Descargar, Luna, Nube, Sol, WhatsApp } from "./iconos";
 
 const servidor = (url) => {
   try {
@@ -105,7 +105,11 @@ export function PantallaAcceso({ aviso, alEntrar }) {
             </button>
           </p>
         )}
-        <p className="ayuda">¿Tienes tu enlace de acceso? Ábrelo y entrarás directo.</p>
+        <p className="ayuda">
+          Por seguridad la clave se pide cada vez que abres la app, y otra vez si pasas más de 3
+          minutos fuera de ella.
+          Tu gestor de contraseñas puede rellenarla, o abre tu enlace de acceso.
+        </p>
       </form>
     </main>
   );
@@ -129,9 +133,10 @@ export function mensajeInvitacion({ enlace, servidor: api, clave }) {
     "",
     "2️⃣ Listo. No hace falta registrarse ni instalar nada.",
     "",
-    "*Si te pide datos para entrar* 🔑",
-    `• Servidor: ${api}`,
+    "*Para volver a entrar* 🔑",
+    "Por seguridad la app se bloquea si pasas más de 3 minutos fuera, y cada vez que la abras te pedirá la clave:",
     `• Clave: ${clave}`,
+    `• Servidor (solo si te lo pide): ${api}`,
     "",
     "💡 *Para tenerla como app:* en el navegador abre el menú y toca *Agregar a pantalla de inicio*.",
     "",
@@ -184,6 +189,13 @@ export function ModalCompartir({ alCerrar, avisar }) {
 
   function guardarInvitado(e) {
     e.preventDefault();
+    // El gestor de contraseñas puede rellenar aquí la clave principal por
+    // error. Si se aceptara, la invitación llevaría tu clave y cambiar
+    // TOKEN_INVITADO ya no le quitaría el acceso a nadie.
+    if (claveInvitado.trim() === leerToken()) {
+      avisar("Esa es tu clave principal. Aquí va la de invitado.", "error");
+      return;
+    }
     guardarSesion({ invitado: claveInvitado });
     setEnlace(enlaceInvitado());
     setClaveInvitado("");
@@ -247,7 +259,7 @@ export function ModalCompartir({ alCerrar, avisar }) {
               type="password"
               className="campo-en-linea"
               aria-label="Clave de invitado"
-              autoComplete="off"
+              autoComplete="new-password"
               value={claveInvitado}
               onChange={(e) => setClaveInvitado(e.target.value)}
               placeholder="Clave de invitado"
@@ -328,12 +340,14 @@ export function ModalAjustes({ alCerrar, alSalir, tema, alElegirTema, items, alR
       </section>
 
       <section className="ajuste">
-        <h3>Sesión</h3>
+        <h3>Seguridad</h3>
         <p className="ayuda-ajuste">
-          Conectado a <code>{servidor(leerUrl())}</code>
+          La app se bloquea sola si pasas más de 3 minutos fuera de ella, y la clave se borra al
+          cerrarla. Si vas a prestar este dispositivo, bloquéala antes con el candado. Conectado a{" "}
+          <code>{servidor(leerUrl())}</code>.
         </p>
         <button type="button" className="btn btn--peligro-solido" onClick={alSalir}>
-          <Salir width={16} height={16} /> Cerrar sesión en este dispositivo
+          <Candado width={16} height={16} /> Bloquear ahora
         </button>
       </section>
     </Hoja>

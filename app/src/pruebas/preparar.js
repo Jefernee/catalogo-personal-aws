@@ -6,6 +6,7 @@ import { simularPantalla } from "./pantalla";
 
 beforeEach(() => {
   localStorage.clear();
+  sessionStorage.clear();
   history.replaceState(null, "", "/");
   simularPantalla();
   Object.defineProperty(navigator, "clipboard", {

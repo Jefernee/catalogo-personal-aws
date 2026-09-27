@@ -299,10 +299,32 @@ def test_export_sube_el_archivo_a_s3(lf, s3):
     assert {i["titulo"] for i in contenido} == {"Dune", "Arrival"}
 
 
-def test_el_archivo_lleva_la_fecha_en_el_nombre(lf):
+def test_el_archivo_lleva_que_se_exporto_y_la_fecha(lf):
     _, cuerpo, _ = llamar(lf, "POST", "/export")
     hoy = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    assert cuerpo["archivo"] == f"exports/export-{hoy}.json"
+    assert cuerpo["archivo"].startswith(f"exports/catalogo-{hoy}_")
+    assert cuerpo["archivo"].endswith(".json")
+
+    _, cuerpo, _ = llamar(lf, "POST", "/export", params={"tipo": "diario"})
+    assert cuerpo["archivo"].startswith(f"exports/diario-{hoy}_")
+
+
+def test_exportar_catalogo_y_diario_seguidos_deja_los_dos_archivos(lf, s3):
+    """Antes los dos usaban el mismo nombre y el segundo pisaba al primero."""
+    crear_item(lf, tipo="libro", titulo="Dune")
+    crear_item(lf, tipo="diario", titulo="Hoy", contenido="algo")
+    _, catalogo, _ = llamar(lf, "POST", "/export")
+    _, diario, _ = llamar(lf, "POST", "/export", params={"tipo": "diario"})
+
+    assert catalogo["archivo"] != diario["archivo"]
+    claves = {o["Key"] for o in s3.list_objects_v2(Bucket=BUCKET_NAME)["Contents"]}
+    assert {catalogo["archivo"], diario["archivo"]} <= claves
+
+
+def test_un_tipo_raro_no_se_cuela_en_el_nombre_del_archivo(lf):
+    _, cuerpo, _ = llamar(lf, "POST", "/export", params={"tipo": "../../otra-carpeta"})
+    assert cuerpo["archivo"].startswith("exports/otracarpeta-")
+    assert ".." not in cuerpo["archivo"]
 
 
 def test_el_export_deja_fuera_el_diario(lf, s3):
@@ -568,9 +590,28 @@ def test_bearer_sin_distinguir_mayusculas(lf):
 def test_la_clave_no_queda_en_los_logs(lf, capsys):
     llamar(lf, "GET", "/catalogo")
     llamar(lf, "GET", "/catalogo", headers={"Authorization": f"Bearer {TOKEN_PRINCIPAL}"})
+    # Payload v1 (REST API): la clave también viene en multiValueHeaders.
+    lf.lambda_handler({"httpMethod": "GET", "path": "/catalogo",
+                       "headers": {"Authorization": f"Bearer {TOKEN_PRINCIPAL}"},
+                       "multiValueHeaders": {"Authorization": [f"Bearer {TOKEN_PRINCIPAL}"]}}, None)
     salida = capsys.readouterr().out
     assert TOKEN_PRINCIPAL not in salida
-    assert "[oculto]" in salida
+
+
+def test_el_texto_del_diario_no_queda_en_los_logs(lf, capsys):
+    crear_item(lf, tipo="diario", titulo="Privado", contenido="algo muy personal")
+    salida = capsys.readouterr().out
+    assert "algo muy personal" not in salida
+    assert "Privado" not in salida
+    assert "POST /catalogo -> 201" in salida
+
+
+def test_sin_clave_no_se_puede_escribir_en_los_logs(lf, capsys):
+    """Quien no tiene clave no debe poder meter texto propio en CloudWatch."""
+    llamar(lf, "POST", "/catalogo", body={"titulo": "texto-del-intruso"}, token=SIN_CLAVE)
+    salida = capsys.readouterr().out
+    assert "texto-del-intruso" not in salida
+    assert "-> 401" in salida
 
 
 def test_la_clave_no_viaja_en_las_respuestas(lf):

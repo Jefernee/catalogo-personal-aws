@@ -1,9 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  BLOQUEO_MS,
   ErrorApi,
   ErrorDeRed,
   api,
   cerrarSesion,
+  debeBloquearse,
+  marcarOculta,
+  migrarSesionAntigua,
   enlaceInvitado,
   etiquetaEstado,
   guardarSesion,
@@ -193,3 +197,47 @@ describe("diario", () => {
     vi.useRealTimers();
   });
 });
+
+describe("la clave no se queda para siempre", () => {
+  it("se guarda solo en la sesión: al cerrar la app se borra", () => {
+    guardarSesion({ url: API, token: "mi-clave", invitado: "inv" });
+    expect(sessionStorage.getItem("catalogo.token")).toBe("mi-clave");
+    expect(localStorage.getItem("catalogo.token")).toBeNull();
+    expect(localStorage.getItem("catalogo.invitado")).toBeNull();
+    // La dirección de la API sí se recuerda: no es secreta sin la clave.
+    expect(localStorage.getItem("catalogo.api")).toBe(API);
+  });
+
+  it("las claves que dejó guardadas una versión anterior se mudan y se borran", () => {
+    localStorage.setItem("catalogo.token", "vieja");
+    localStorage.setItem("catalogo.invitado", "inv-vieja");
+    migrarSesionAntigua();
+    expect(localStorage.getItem("catalogo.token")).toBeNull();
+    expect(localStorage.getItem("catalogo.invitado")).toBeNull();
+    expect(leerToken()).toBe("vieja");
+    expect(leerInvitado()).toBe("inv-vieja");
+  });
+});
+
+describe("bloqueo por inactividad", () => {
+  it("no bloquea si la app nunca dejó de verse", () => {
+    expect(debeBloquearse()).toBe(false);
+  });
+
+  it("no bloquea tras una salida corta", () => {
+    marcarOculta(1_000_000);
+    expect(debeBloquearse(1_000_000 + BLOQUEO_MS - 1)).toBe(false);
+  });
+
+  it("bloquea si estuvo más de 5 minutos sin verse", () => {
+    marcarOculta(1_000_000);
+    expect(debeBloquearse(1_000_000 + BLOQUEO_MS + 1)).toBe(true);
+  });
+
+  it("la marca se usa una sola vez", () => {
+    marcarOculta(1_000_000);
+    debeBloquearse(1_000_000 + BLOQUEO_MS + 1);
+    expect(debeBloquearse(1_000_000 + BLOQUEO_MS * 3)).toBe(false);
+  });
+});
+

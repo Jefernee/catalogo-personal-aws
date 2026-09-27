@@ -125,7 +125,7 @@ def main(base):
     probar("POST /export responde 200", status == 200, f"status={status}")
     if status == 200:
         probar("El export devuelve la key del archivo",
-               str(export.get("archivo", "")).startswith("exports/export-"),
+               str(export.get("archivo", "")).startswith("exports/catalogo-"),
                export.get("archivo", ""))
         probar("El export cuenta registros", isinstance(export.get("total_registros"), int),
                f"total_registros={export.get('total_registros')}")

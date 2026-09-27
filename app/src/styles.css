@@ -668,7 +668,7 @@ a { color: var(--acento); }
     linear-gradient(90deg, transparent 50px, rgba(214, 72, 72, 0.4) 50px 51.5px, transparent 51.5px),
     #fdfdfb;
 }
-.fondo-rayado .pagina-texto,
+.fondo-rayado .hoja-ventana,
 .fondo-rayado textarea.pagina-texto {
   /* Un renglón por línea de texto: la línea azul queda justo bajo cada frase. */
   background: repeating-linear-gradient(
@@ -1123,4 +1123,105 @@ code {
   background: var(--superficie);
   color: var(--texto);
   box-shadow: var(--sombra-1);
+}
+
+/* ==========================================================================
+   Hojas: una nota larga continúa en la hoja siguiente
+   ========================================================================== */
+
+/* La hoja tiene alto fijo (lo calcula el libro según la pantalla). */
+.pagina--hoja {
+  min-height: 0;
+  padding-bottom: 4px;
+}
+.libro-abierto--doble .pagina--hoja { min-height: 0; }
+
+.pagina--hoja .pagina-cabeza {
+  flex: none;
+  height: 40px;
+  margin: 0;
+}
+
+/* La ventana deja ver una sola columna del flujo de la nota. */
+.hoja-ventana {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+.hoja-flujo {
+  height: 100%;
+  column-gap: 60px;
+  column-fill: auto;
+}
+
+/* Todo cae en renglones de 30 px: el título ocupa uno y deja otro en blanco,
+   así el texto empieza siempre sobre una línea del rayado. */
+.hoja-flujo .pagina-titulo {
+  font-size: 25px;
+  line-height: var(--renglon);
+  margin: 0 0 var(--renglon);
+  break-after: avoid;
+}
+.hoja-flujo .pagina-texto {
+  line-height: var(--renglon);
+  orphans: 2;
+  widows: 2;
+}
+
+.pagina-continua {
+  margin-right: auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--letra-libro);
+  font-style: italic;
+  font-size: 13.5px;
+  color: var(--tinta-suave);
+}
+
+.pagina-pie {
+  flex: none;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--letra-libro);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--tinta-suave);
+}
+.pagina--hoja .pagina-numero { position: static; }
+.pagina-sigue { white-space: pre; }
+
+/* Donde se mide: maquetado de verdad, pero fuera de la vista. Fijo y sin alto,
+   para que las hojas medidas no alarguen la página ni le agreguen scroll. */
+.medidor {
+  position: fixed;
+  top: 0;
+  left: -10000px;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+.libro { position: relative; }
+
+@media (max-width: 899px) {
+  .pagina--hoja { min-height: 0; padding: 20px 22px 2px; }
+  .fondo-rayado.pagina--hoja { padding-left: 60px; }
+  .hoja-flujo .pagina-titulo { font-size: 22px; }
+  .pagina--hoja .pagina-pie { height: 48px; }
+}
+
+/* En el celular la hoja llena la pantalla: la página no necesita espacio extra abajo. */
+@media (max-width: 899px) {
+  .envoltura--diario { padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* En el celular el botón flotante es un círculo: no tapa el pie de la hoja. */
+@media (max-width: 560px) {
+  .flotante { width: 56px; height: 56px; padding: 0; border-radius: 50%; }
+  .flotante .etiqueta-flotante { display: none; }
 }

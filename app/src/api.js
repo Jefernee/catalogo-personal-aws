@@ -9,17 +9,24 @@ const LLAVES = {
   invitado: "catalogo.invitado",
 };
 
-// Valores por defecto para desarrollo local, desde app/.env.local (fuera de git).
-// El build publicado se compila sin ese archivo: no lleva ni la URL ni la clave.
+// La URL de la API por defecto para desarrollo local, desde app/.env.local
+// (fuera de git). El build publicado se compila sin ese archivo.
 const POR_DEFECTO = {
   url: (import.meta.env.VITE_API_URL || "").replace(/\/$/, ""),
-  token: import.meta.env.VITE_API_TOKEN || "",
+  token: "",
   invitado: "",
 };
 
+/**
+ * Solo la dirección de la API se recuerda entre visitas. Las claves viven en
+ * sessionStorage: se borran al cerrar la app o la pestaña. Así, si prestas el
+ * teléfono o la computadora, quien la abra tiene que saber la clave.
+ */
+const almacen = (campo) => (campo === "url" ? localStorage : sessionStorage);
+
 function leer(campo) {
   try {
-    return localStorage.getItem(LLAVES[campo]) || POR_DEFECTO[campo];
+    return almacen(campo).getItem(LLAVES[campo]) || POR_DEFECTO[campo];
   } catch {
     return POR_DEFECTO[campo];
   }
@@ -27,10 +34,27 @@ function leer(campo) {
 
 function guardar(campo, valor) {
   try {
-    if (valor) localStorage.setItem(LLAVES[campo], valor);
-    else localStorage.removeItem(LLAVES[campo]);
+    if (valor) almacen(campo).setItem(LLAVES[campo], valor);
+    else almacen(campo).removeItem(LLAVES[campo]);
   } catch {
-    /* modo privado: la sesión solo dura mientras la pestaña esté abierta */
+    /* modo privado: no hay dónde guardar, la app pedirá la clave de nuevo */
+  }
+}
+
+/**
+ * Versiones anteriores guardaban las claves para siempre en localStorage. Se
+ * mudan a la sesión actual y se borran de ahí: desde ahora caducan al cerrar.
+ */
+export function migrarSesionAntigua() {
+  try {
+    for (const campo of ["token", "invitado"]) {
+      const vieja = localStorage.getItem(LLAVES[campo]);
+      if (!vieja) continue;
+      if (!sessionStorage.getItem(LLAVES[campo])) sessionStorage.setItem(LLAVES[campo], vieja);
+      localStorage.removeItem(LLAVES[campo]);
+    }
+  } catch {
+    /* sin almacenamiento no hay nada que mudar */
   }
 }
 
@@ -44,13 +68,35 @@ export const leerUrl = () => leer("url");
 export const leerToken = () => leer("token");
 export const leerInvitado = () => leer("invitado");
 
+/**
+ * Guarda la sesión. La clave queda atada a su servidor: si cambia la dirección
+ * de la API y no viene una clave nueva junto con ella, las anteriores se
+ * olvidan. Así ningún enlace puede llevarse tu clave a un servidor ajeno.
+ */
 export function guardarSesion({ url, token, invitado } = {}) {
-  if (url !== undefined && esUrlValida(limpiarUrl(url))) guardar("url", limpiarUrl(url));
+  if (url !== undefined) {
+    const nueva = limpiarUrl(url);
+    if (!esUrlValida(nueva)) return;
+    const cambiaDeServidor = nueva !== leerUrl();
+    guardar("url", nueva);
+    if (cambiaDeServidor) {
+      if (token === undefined) guardar("token", "");
+      if (invitado === undefined) guardar("invitado", "");
+    }
+  }
   if (token !== undefined) guardar("token", (token || "").trim());
   if (invitado !== undefined) guardar("invitado", (invitado || "").trim());
 }
 
-/** Olvida la clave en este dispositivo. La URL se queda: al volver solo hace falta la clave. */
+const hostDe = (url) => {
+  try {
+    return new URL(url).host;
+  } catch {
+    return url;
+  }
+};
+
+/** Bloquea: olvida las claves en este dispositivo. La URL se queda, al volver solo hace falta la clave. */
 export function cerrarSesion() {
   guardar("token", "");
   guardar("invitado", "");
@@ -74,6 +120,21 @@ export function tomarDatosDelEnlace() {
     if (!api && !p.get("token")) return false;
     if (api && !esUrlValida(api)) return false;
 
+    // Un enlace que apunta a otro servidor puede ser una trampa: se pregunta
+    // primero, mostrando a dónde lleva. Aunque se acepte, la clave actual se
+    // olvida (ver guardarSesion) y no se manda allí.
+    const anterior = leerUrl();
+    if (api && anterior && api !== anterior) {
+      const acepta = window.confirm(
+        `Este enlace te conecta a otro servidor:\n\n${hostDe(api)}\n\n` +
+          "Solo continúa si confías en quien te lo mandó. Tu clave actual no se enviará allí."
+      );
+      if (!acepta) {
+        history.replaceState(null, "", location.pathname);
+        return false;
+      }
+    }
+
     guardarSesion({
       url: api || undefined,
       token: p.get("token") ?? undefined,
@@ -84,6 +145,38 @@ export function tomarDatosDelEnlace() {
     return true;
   } catch {
     return false; /* si algo falla, la app pide la clave como siempre */
+  }
+}
+
+
+// ---------------------------------------------------------------------------
+// Bloqueo por inactividad
+// ---------------------------------------------------------------------------
+
+/**
+ * Tiempo fuera de la app tras el que vuelve a pedir la clave. Da para salir a
+ * otra app un momento y regresar; si el aparato se queda por ahí, se protege.
+ */
+export const BLOQUEO_MS = 3 * 60 * 1000;
+const LLAVE_OCULTA = "catalogo.oculta-desde";
+
+/** Anota cuándo la app dejó de verse (se cambió de app, se apagó la pantalla…). */
+export function marcarOculta(ahora = Date.now()) {
+  try {
+    sessionStorage.setItem(LLAVE_OCULTA, String(ahora));
+  } catch {
+    /* sin almacenamiento, el bloqueo depende de cerrar la app */
+  }
+}
+
+/** true si pasó más de BLOQUEO_MS desde que la app dejó de verse. Limpia la marca. */
+export function debeBloquearse(ahora = Date.now()) {
+  try {
+    const desde = Number(sessionStorage.getItem(LLAVE_OCULTA) || 0);
+    sessionStorage.removeItem(LLAVE_OCULTA);
+    return Boolean(desde) && ahora - desde > BLOQUEO_MS;
+  } catch {
+    return false;
   }
 }
 
