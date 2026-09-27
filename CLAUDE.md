@@ -105,7 +105,7 @@ demo.sh                 guion de la demo en vivo
 pruebas_e2e.py          16 verificaciones contra la API desplegada
 tests/                  75 pruebas con pytest + moto
 servidor_local.py       la Lambda real contra AWS emulado, en localhost:8787
-app/                    aplicación React + Vite (PWA instalable), 91 pruebas con vitest
+app/                    aplicación React + Vite (PWA instalable), 93 pruebas con vitest
 frontend/index.html     la misma idea en un archivo, sin dependencias
 DESPLIEGUE.md           paso a paso en la consola de AWS
 PLAN-proyecto-final-modulo3.md   el plan contra la rúbrica
@@ -115,7 +115,7 @@ PLAN-proyecto-final-modulo3.md   el plan contra la rúbrica
 
 ```bash
 python -m pytest tests -q                 # 75 pruebas de la Lambda
-cd app && npm test                        # 91 pruebas de la app
+cd app && npm test                        # 93 pruebas de la app
 python servidor_local.py                  # API local sin AWS, clave "local"
 python pruebas_e2e.py <URL_API> <CLAVE>   # 19 verificaciones contra la API real
 python cargar_datos.py <URL_API> <CLAVE>  # carga los 10 registros de ejemplo
@@ -173,6 +173,11 @@ retención de logs distinta de "nunca vence".
   es rosa. Se probó darles versión de noche y al dueño no le gustó: no se distinguían.
   `color-scheme: only light` en la raíz y en `.pagina` evita que el navegador las oscurezca por
   su cuenta. Chrome y Samsung Internet lo hacen si nadie se lo impide y las dejan casi negras.
+- **Samsung Internet no se puede evitar desde la página.** Su modo oscuro por defecto le dice a
+  la página "claro" y la oscurece con su propio algoritmo, diga lo que diga `color-scheme`. Se
+  probó simulándolo con Chromium: ninguna combinación lo impide. Solo se quita desde el
+  navegador: Configuración → Labs → «Usar tema oscuro del sitio web». Si Ajustes detecta
+  Samsung Internet, lo explica.
 - **La app arranca en claro** aunque el teléfono esté en oscuro. Oscuro y "según el teléfono"
   se eligen en Ajustes, y solo entonces se guarda el tema (`catalogo.tema-elegido`). Las
   versiones anteriores lo guardaban solas en cada visita (`catalogo.tema`, `catalogo.apariencia`),

@@ -914,6 +914,15 @@ a { color: var(--acento); }
 .ayuda-ajuste { margin: 0 0 12px; color: var(--suave); font-size: 13.5px; }
 .nota-ajuste { margin: 10px 0 0; color: var(--tenue); font-size: 12.5px; line-height: 1.5; }
 .version-app { margin-top: 26px; text-align: center; }
+.aviso-samsung {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: var(--acento-suave);
+  color: var(--texto);
+  font-size: 13px;
+  line-height: 1.5;
+}
 .fila-botones { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .fila-botones .campo-en-linea { flex: 1 1 180px; width: auto; }
 .enlace-compartir {

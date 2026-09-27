@@ -136,6 +136,20 @@ describe("ajustes: apariencia", () => {
     expect(screen.getByText(/Tu teléfono está en modo oscuro, y la app también/)).toBeInTheDocument();
   });
 
+  it("en Samsung Internet explica cómo evitar que el navegador oscurezca las hojas", () => {
+    vi.spyOn(navigator, "userAgent", "get").mockReturnValue(
+      "Mozilla/5.0 (Linux; Android 14; SM-A546E) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/27.0 Chrome/125.0 Mobile Safari/537.36"
+    );
+    ajustes("claro");
+    expect(screen.getByText(/Es Samsung Internet, que oscurece las páginas/)).toBeInTheDocument();
+    expect(screen.getByText("Usar tema oscuro del sitio web")).toBeInTheDocument();
+  });
+
+  it("en otros navegadores no muestra ese aviso", () => {
+    ajustes("claro");
+    expect(screen.queryByText(/Samsung Internet/)).not.toBeInTheDocument();
+  });
+
   it("con un tema fijo, avisa que no cambia con el teléfono", () => {
     ajustes("claro");
     expect(screen.getByText(/Siempre en claro, aunque el teléfono esté en oscuro/)).toBeInTheDocument();

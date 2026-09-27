@@ -230,6 +230,13 @@ export function descargarCopia(items) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+/**
+ * Samsung Internet, con el teléfono en oscuro, oscurece las páginas con su
+ * propio algoritmo e ignora lo que la página declare: el cuaderno queda negro.
+ * Solo se evita desde el navegador, así que en Samsung Ajustes lo explica.
+ */
+export const esSamsungInternet = (agente = navigator.userAgent) => /SamsungBrowser/i.test(agente);
+
 /** Ajustes: tema, copia de seguridad y seguridad. */
 const TEMAS = [
   { id: "claro", nombre: "Claro" },
@@ -267,6 +274,14 @@ export function ModalAjustes({ alCerrar, alSalir, tema, alElegirTema, items, alR
               ? "Siempre en claro, aunque el teléfono esté en oscuro."
               : "Siempre en oscuro, aunque el teléfono esté en claro."}
         </p>
+        {esSamsungInternet() && (
+          <p className="aviso-samsung">
+            ¿Con el teléfono en modo oscuro las hojas se ven negras? Es Samsung Internet, que
+            oscurece las páginas por su cuenta. Para verlas con su color: abre Samsung Internet,
+            toca el menú <strong>☰</strong> → <strong>Configuración</strong> → <strong>Labs</strong> y
+            activa <strong>Usar tema oscuro del sitio web</strong>.
+          </p>
+        )}
       </section>
 
       <section className="ajuste">
