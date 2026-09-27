@@ -94,7 +94,7 @@ export default function App() {
       const datos = await api.listar();
       setItems(datos.items || []);
     } catch (e) {
-      if (e instanceof ErrorApi && e.estado === 401) expulsar("Tu clave ya no es válida. Vuelve a entrar.");
+      if (e instanceof ErrorApi && e.estado === 401) expulsar("La contraseña cambió. Vuelve a entrar.");
       else avisar(e.message, "error");
     } finally {
       setCargando(false);
@@ -141,7 +141,7 @@ export default function App() {
   const manejarError = useCallback(
     async (e) => {
       if (e instanceof ErrorApi && e.estado === 401) {
-        expulsar("Tu clave ya no es válida. Vuelve a entrar.");
+        expulsar("La contraseña cambió. Vuelve a entrar.");
         return;
       }
       if (e instanceof ErrorApi && e.estado === 404) {
@@ -281,9 +281,9 @@ export default function App() {
           <button
             type="button"
             className="btn btn--sutil btn--icono"
-            title="Bloquear: vuelve a pedir la clave"
+            title="Bloquear: vuelve a pedir la contraseña"
             aria-label="Bloquear"
-            onClick={() => expulsar("Bloqueado. Entra con tu clave.")}
+            onClick={() => expulsar("Bloqueado. Escribe la contraseña para entrar.")}
           >
             <Candado />
           </button>
@@ -291,7 +291,7 @@ export default function App() {
             type="button"
             className="btn btn--secundario"
             onClick={() => setModal({ tipo: "compartir" })}
-            title="Compartir acceso"
+            title="Compartir"
           >
             <Compartir />
             <span className="etiqueta-boton">Compartir</span>
@@ -408,7 +408,7 @@ export default function App() {
       {modal?.tipo === "ajustes" && (
         <ModalAjustes
           alCerrar={() => setModal(null)}
-          alSalir={() => expulsar("Bloqueado. Entra con tu clave.")}
+          alSalir={() => expulsar("Bloqueado. Escribe la contraseña para entrar.")}
           tema={tema}
           alElegirTema={setTema}
           items={items}

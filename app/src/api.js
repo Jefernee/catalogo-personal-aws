@@ -180,19 +180,6 @@ export function debeBloquearse(ahora = Date.now()) {
   }
 }
 
-// Solo se escapa lo que rompería el enlace. "https://" queda legible: el enlace
-// se lee en un chat, y "https%3A%2F%2F" asusta aunque funcione igual.
-const escaparSuave = (v) => String(v).replace(/[%&#+\s]/g, encodeURIComponent);
-
-/** El enlace que se le pasa a otra persona. Lleva la clave de invitado, nunca la tuya. */
-export function enlaceInvitado() {
-  const url = leerUrl();
-  const invitado = leerInvitado();
-  if (!url || !invitado) return "";
-  const base = `${location.origin}${location.pathname}`;
-  return `${base}#api=${escaparSuave(url)}&token=${escaparSuave(invitado)}`;
-}
-
 export class ErrorDeRed extends Error {}
 
 /** Error de la API que conserva el código HTTP para poder reaccionar a él. */
@@ -235,7 +222,7 @@ async function pedir(ruta, opciones = {}, sesion = {}) {
 
   if (!respuesta.ok) {
     const mensaje =
-      respuesta.status === 401 ? "La clave no es válida." :
+      respuesta.status === 401 ? "La contraseña no es correcta." :
       respuesta.status === 503 ? "La API todavía no tiene configurado el acceso." :
       datos.error || `Error ${respuesta.status}`;
     throw new ErrorApi(mensaje, respuesta.status);

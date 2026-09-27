@@ -1,21 +1,17 @@
 import { useState } from "react";
-import { DUENO, ErrorApi, api, enlaceInvitado, guardarSesion, hoyIso, leerInvitado, leerToken, leerUrl } from "./api";
+import { DUENO, ErrorApi, api, guardarSesion, hoyIso, leerToken, leerUrl } from "./api";
 import { Hoja } from "./hoja";
 import { Candado, Compartir, Copiar, Descargar, Luna, Nube, Sol, WhatsApp } from "./iconos";
 
-const servidor = (url) => {
-  try {
-    return new URL(url).host;
-  } catch {
-    return url;
-  }
-};
+/** La dirección de la página, sin nada después del "#": es la que se comparte. */
+const paginaDeLaApp = () => `${location.origin}${location.pathname}`;
 
-/** Pantalla de entrada. La clave es un campo de contraseña: Bitwarden la ofrece guardar y rellenar. */
+/** Pantalla de entrada: solo la contraseña. Bitwarden la ofrece guardar y rellenar. */
 export function PantallaAcceso({ aviso, alEntrar }) {
   const [url, setUrl] = useState(leerUrl());
-  const [clave, setClave] = useState("");
-  const [cambiarServidor, setCambiarServidor] = useState(!leerUrl());
+  const [contrasena, setContrasena] = useState("");
+  // Solo si esta copia de la app no sabe a qué servidor ir (en desarrollo, sin .env.local).
+  const pedirServidor = !leerUrl();
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState("");
 
@@ -24,12 +20,12 @@ export function PantallaAcceso({ aviso, alEntrar }) {
     setError("");
     setEnviando(true);
     try {
-      await api.probar(url, clave.trim());
-      guardarSesion({ url, token: clave.trim() });
+      await api.probar(url, contrasena.trim());
+      guardarSesion({ url, token: contrasena.trim() });
       alEntrar();
     } catch (err) {
       setError(
-        err instanceof ErrorApi && err.estado === 401 ? "Esa clave no es correcta." : err.message
+        err instanceof ErrorApi && err.estado === 401 ? "Esa contraseña no es correcta." : err.message
       );
     } finally {
       setEnviando(false);
@@ -44,12 +40,12 @@ export function PantallaAcceso({ aviso, alEntrar }) {
         <p>
           El diario de {DUENO}.
           <br />
-          Entra con tu clave de acceso.
+          Escribe la contraseña para entrar.
         </p>
 
         {aviso && <p className="aviso-acceso" role="status">{aviso}</p>}
 
-        {/* El gestor de contraseñas necesita un usuario para guardar la clave junto a él. */}
+        {/* El gestor de contraseñas necesita un usuario para guardar la contraseña junto a él. */}
         <input
           type="text"
           name="username"
@@ -61,7 +57,7 @@ export function PantallaAcceso({ aviso, alEntrar }) {
           aria-hidden="true"
         />
 
-        {cambiarServidor ? (
+        {pedirServidor && (
           <div className="campo">
             <label htmlFor="api">Dirección de la API</label>
             <input
@@ -74,17 +70,17 @@ export function PantallaAcceso({ aviso, alEntrar }) {
               required
             />
           </div>
-        ) : null}
+        )}
 
         <div className="campo">
-          <label htmlFor="clave">Clave</label>
+          <label htmlFor="contrasena">Contraseña</label>
           <input
-            id="clave"
+            id="contrasena"
             name="password"
             type="password"
             autoComplete="current-password"
-            value={clave}
-            onChange={(e) => setClave(e.target.value)}
+            value={contrasena}
+            onChange={(e) => setContrasena(e.target.value)}
             required
             autoFocus
           />
@@ -97,18 +93,8 @@ export function PantallaAcceso({ aviso, alEntrar }) {
           {enviando ? "Entrando…" : "Entrar"}
         </button>
 
-        {!cambiarServidor && (
-          <p className="ayuda">
-            Servidor: <code>{servidor(url)}</code>{" "}
-            <button type="button" className="enlace" onClick={() => setCambiarServidor(true)}>
-              cambiar
-            </button>
-          </p>
-        )}
         <p className="ayuda">
-          Por seguridad la clave se pide cada vez que abres la app, y otra vez si pasas más de 3
-          minutos fuera de ella.
-          Tu gestor de contraseñas puede rellenarla, o abre tu enlace de acceso.
+          La contraseña se pide cada vez que abres la app, y otra vez si pasas más de 3 minutos fuera.
         </p>
       </form>
     </main>
@@ -116,32 +102,30 @@ export function PantallaAcceso({ aviso, alEntrar }) {
 }
 
 /**
- * El mensaje que recibe la persona invitada. Explica qué es el diario, cómo
- * entrar paso a paso y trae los datos de acceso por si el enlace le pide clave.
- * Usa el formato de WhatsApp: *negritas*.
+ * El mensaje que recibe la persona con quien compartes: qué es el diario, la
+ * página y la contraseña, paso a paso. Usa el formato de WhatsApp: *negritas*.
  */
-export function mensajeInvitacion({ enlace, servidor: api, clave }) {
+export function mensajeInvitacion({ enlace, contrasena }) {
   return [
     `📔 *El diario de ${DUENO}*`,
     "",
-    `¡Hola! 👋 Soy ${DUENO} y te comparto el acceso a mi diario: una app donde escribo ` +
-      "mis páginas del día y llevo mis listas de tareas, compras y lo que voy leyendo y viendo.",
+    `¡Hola! 👋 Soy ${DUENO} y te comparto mi diario: una app donde escribo mis páginas del día ` +
+      "y llevo mis listas de tareas, compras y lo que voy leyendo y viendo.",
     "",
     "*Cómo entrar*",
-    "1️⃣ Toca este enlace y entrarás directo:",
+    "1️⃣ Abre esta página:",
     enlace,
     "",
-    "2️⃣ Listo. No hace falta registrarse ni instalar nada.",
+    `2️⃣ Escribe la contraseña: *${contrasena}*`,
     "",
-    "*Para volver a entrar* 🔑",
-    "Por seguridad la app se bloquea si pasas más de 3 minutos fuera, y cada vez que la abras te pedirá la clave:",
-    `• Clave: ${clave}`,
-    `• Servidor (solo si te lo pide): ${api}`,
+    "3️⃣ Toca *Entrar*. ¡Listo!",
+    "",
+    "La contraseña te la va a pedir cada vez que abras la app.",
     "",
     "💡 *Para tenerla como app:* en el navegador abre el menú y toca *Agregar a pantalla de inicio*.",
     "",
     "Puedes ver y también editar, así que úsalo con cariño 🙂",
-    "🔒 Este acceso es solo para ti: por favor no lo reenvíes.",
+    "🔒 Por favor no reenvíes este mensaje.",
   ].join("\n");
 }
 
@@ -155,19 +139,18 @@ function ComoWhatsApp({ texto }) {
   );
 }
 
-/** Para mostrar el mensaje en pantalla sin exponer la clave (por ejemplo, al proyectar). */
+/** Para mostrar el mensaje en pantalla sin exponer la contraseña (por ejemplo, al proyectar). */
 export const ocultarClave = (texto, clave) =>
   clave ? texto.split(clave).join("••••••••") : texto;
 
-/** Compartir acceso: el mensaje de invitación, listo para WhatsApp. */
+/** Compartir: manda la página y la contraseña, listo para WhatsApp. */
 export function ModalCompartir({ alCerrar, avisar }) {
-  const [enlace, setEnlace] = useState(enlaceInvitado());
-  const [claveInvitado, setClaveInvitado] = useState("");
-  const [verClave, setVerClave] = useState(false);
+  const [verContrasena, setVerContrasena] = useState(false);
   const puedeCompartir = typeof navigator !== "undefined" && Boolean(navigator.share);
 
-  const clave = leerInvitado();
-  const mensaje = enlace ? mensajeInvitacion({ enlace, servidor: leerUrl(), clave }) : "";
+  const contrasena = leerToken();
+  const enlace = paginaDeLaApp();
+  const mensaje = mensajeInvitacion({ enlace, contrasena });
 
   async function copiar(texto, aviso) {
     try {
@@ -187,88 +170,47 @@ export function ModalCompartir({ alCerrar, avisar }) {
     }
   }
 
-  function guardarInvitado(e) {
-    e.preventDefault();
-    // El gestor de contraseñas puede rellenar aquí la clave principal por
-    // error. Si se aceptara, la invitación llevaría tu clave y cambiar
-    // TOKEN_INVITADO ya no le quitaría el acceso a nadie.
-    if (claveInvitado.trim() === leerToken()) {
-      avisar("Esa es tu clave principal. Aquí va la de invitado.", "error");
-      return;
-    }
-    guardarSesion({ invitado: claveInvitado });
-    setEnlace(enlaceInvitado());
-    setClaveInvitado("");
-  }
-
   return (
-    <Hoja titulo="Compartir acceso" alCerrar={alCerrar} clase="hoja--ajustes">
+    <Hoja titulo="Compartir" alCerrar={alCerrar} clase="hoja--ajustes">
       <p className="ayuda-ajuste">
-        Manda una invitación para que otra persona entre sin registrarse. Podrá{" "}
-        <strong>ver y editar todo</strong>, diario incluido.
+        Manda la página y la contraseña. Quien lo reciba podrá <strong>ver y editar todo</strong>,
+        diario incluido.
       </p>
 
-      {enlace ? (
-        <>
-          <div className="fila-botones">
-            <a className="btn btn--whatsapp" href={enlaceWhatsApp(mensaje)} target="_blank" rel="noopener noreferrer">
-              <WhatsApp width={17} height={17} /> Enviar por WhatsApp
-            </a>
-            {puedeCompartir && (
-              <button type="button" className="btn btn--secundario" onClick={compartir}>
-                <Compartir width={16} height={16} /> Otra app
-              </button>
-            )}
-            <button
-              type="button"
-              className="btn btn--secundario"
-              onClick={() => copiar(mensaje, "Mensaje copiado. Pégalo en el chat de quien quieras.")}
-            >
-              <Copiar width={16} height={16} /> Copiar
-            </button>
-          </div>
+      <div className="fila-botones">
+        <a className="btn btn--whatsapp" href={enlaceWhatsApp(mensaje)} target="_blank" rel="noopener noreferrer">
+          <WhatsApp width={17} height={17} /> Enviar por WhatsApp
+        </a>
+        {puedeCompartir && (
+          <button type="button" className="btn btn--secundario" onClick={compartir}>
+            <Compartir width={16} height={16} /> Otra app
+          </button>
+        )}
+        <button
+          type="button"
+          className="btn btn--secundario"
+          onClick={() => copiar(mensaje, "Mensaje copiado. Pégalo en el chat de quien quieras.")}
+        >
+          <Copiar width={16} height={16} /> Copiar
+        </button>
+      </div>
 
-          <figure className="vista-mensaje">
-            <figcaption>
-              Así le llega el mensaje
-              <button type="button" className="enlace" onClick={() => setVerClave(!verClave)}>
-                {verClave ? "ocultar clave" : "mostrar clave"}
-              </button>
-            </figcaption>
-            <div className="burbuja" aria-label="Vista previa del mensaje">
-              <ComoWhatsApp texto={verClave ? mensaje : ocultarClave(mensaje, clave)} />
-            </div>
-          </figure>
+      <figure className="vista-mensaje">
+        <figcaption>
+          Así le llega el mensaje
+          <button type="button" className="enlace" onClick={() => setVerContrasena(!verContrasena)}>
+            {verContrasena ? "ocultar contraseña" : "mostrar contraseña"}
+          </button>
+        </figcaption>
+        <div className="burbuja" aria-label="Vista previa del mensaje">
+          <ComoWhatsApp texto={verContrasena ? mensaje : ocultarClave(mensaje, contrasena)} />
+        </div>
+      </figure>
 
-          <p className="nota-ajuste">
-            Para quitarle el acceso a quien lo tenga, cambia <code>TOKEN_INVITADO</code> en la Lambda.
-            Tu acceso no se ve afectado.{" "}
-            <button type="button" className="enlace" onClick={() => copiar(enlace, "Enlace copiado.")}>
-              Copiar solo el enlace
-            </button>
-          </p>
-        </>
-      ) : (
-        <form onSubmit={guardarInvitado}>
-          <p className="nota-ajuste">
-            Este dispositivo no tiene la clave de invitado. Abre la app con tu enlace completo de
-            Bitwarden, o pégala aquí:
-          </p>
-          <div className="fila-botones">
-            <input
-              type="password"
-              className="campo-en-linea"
-              aria-label="Clave de invitado"
-              autoComplete="new-password"
-              value={claveInvitado}
-              onChange={(e) => setClaveInvitado(e.target.value)}
-              placeholder="Clave de invitado"
-              required
-            />
-            <button type="submit" className="btn btn--secundario">Guardar</button>
-          </div>
-        </form>
-      )}
+      <p className="nota-ajuste">
+        Para quitarle el acceso a alguien, cambia la contraseña (<code>TOKEN_PRINCIPAL</code> en la
+        Lambda) y compártela de nuevo solo con quien quieras.
+      </p>
     </Hoja>
   );
 }
@@ -286,7 +228,7 @@ export function descargarCopia(items) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-/** Ajustes: tema, copia de seguridad y sesión. */
+/** Ajustes: tema, copia de seguridad y seguridad. */
 const TEMAS = [
   { id: "sistema", nombre: "Según el teléfono" },
   { id: "claro", nombre: "Claro" },
@@ -342,9 +284,8 @@ export function ModalAjustes({ alCerrar, alSalir, tema, alElegirTema, items, alR
       <section className="ajuste">
         <h3>Seguridad</h3>
         <p className="ayuda-ajuste">
-          La app se bloquea sola si pasas más de 3 minutos fuera de ella, y la clave se borra al
-          cerrarla. Si vas a prestar este dispositivo, bloquéala antes con el candado. Conectado a{" "}
-          <code>{servidor(leerUrl())}</code>.
+          La app se bloquea sola si pasas más de 3 minutos fuera de ella. Si vas a prestar este
+          dispositivo, bloquéala antes con el candado.
         </p>
         <button type="button" className="btn btn--peligro-solido" onClick={alSalir}>
           <Candado width={16} height={16} /> Bloquear ahora

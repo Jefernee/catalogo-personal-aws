@@ -8,7 +8,6 @@ import {
   debeBloquearse,
   marcarOculta,
   migrarSesionAntigua,
-  enlaceInvitado,
   etiquetaEstado,
   guardarSesion,
   hoyIso,
@@ -64,35 +63,6 @@ describe("sesión desde el enlace", () => {
   });
 });
 
-describe("enlace de invitado", () => {
-  it("lleva la clave de invitado, nunca la tuya", () => {
-    guardarSesion({ url: API, token: "clave-principal", invitado: "clave-invitado" });
-    const enlace = enlaceInvitado();
-    expect(enlace).toContain("token=clave-invitado");
-    expect(enlace).not.toContain("clave-principal");
-  });
-
-  it("es legible: la dirección no sale codificada", () => {
-    guardarSesion({ url: API, token: "p", invitado: "i" });
-    expect(enlaceInvitado()).toContain(`#api=${API}&token=i`);
-  });
-
-  it("sin clave de invitado no hay enlace que compartir", () => {
-    guardarSesion({ url: API, token: "p" });
-    expect(enlaceInvitado()).toBe("");
-  });
-
-  it("al abrirlo en otro dispositivo, deja la sesión del invitado", () => {
-    guardarSesion({ url: API, token: "p", invitado: "i" });
-    const enlace = new URL(enlaceInvitado());
-    localStorage.clear();
-    history.replaceState(null, "", `/${enlace.hash}`);
-    tomarDatosDelEnlace();
-    expect(leerUrl()).toBe(API);
-    expect(leerToken()).toBe("i");
-  });
-});
-
 describe("cerrar sesión", () => {
   it("olvida las claves y conserva la dirección", () => {
     guardarSesion({ url: API, token: "p", invitado: "i" });
@@ -130,7 +100,7 @@ describe("peticiones", () => {
   it("un 401 se convierte en ErrorApi con su código", async () => {
     guardarSesion({ url: API, token: "mala" });
     vi.spyOn(globalThis, "fetch").mockImplementation(() => respuesta(401, { error: "x" }));
-    await expect(api.listar()).rejects.toMatchObject({ estado: 401, message: "La clave no es válida." });
+    await expect(api.listar()).rejects.toMatchObject({ estado: 401, message: "La contraseña no es correcta." });
     await expect(api.listar()).rejects.toBeInstanceOf(ErrorApi);
   });
 

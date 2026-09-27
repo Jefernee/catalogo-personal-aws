@@ -49,15 +49,15 @@ function apiFalsa({ estadoListar = 200 } = {}) {
 describe("acceso", () => {
   it("sin sesión pide la clave", () => {
     render(<App />);
-    expect(screen.getByLabelText("Clave")).toBeInTheDocument();
+    expect(screen.getByLabelText("Contraseña")).toBeInTheDocument();
   });
 
   it("si la clave deja de valer (401), vuelve a la pantalla de acceso con un aviso", async () => {
     guardarSesion({ url: API, token: "revocada" });
     apiFalsa({ estadoListar: 401 });
     render(<App />);
-    expect(await screen.findByText(/ya no es válida/)).toBeInTheDocument();
-    expect(screen.getByLabelText("Clave")).toBeInTheDocument();
+    expect(await screen.findByText(/contraseña cambió/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Contraseña")).toBeInTheDocument();
     expect(leerToken()).toBe("");
   });
 
@@ -67,7 +67,7 @@ describe("acceso", () => {
     render(<App />);
     await userEvent.click(await screen.findByRole("button", { name: "Ajustes" }));
     await userEvent.click(screen.getByRole("button", { name: /bloquear ahora/i }));
-    expect(screen.getByLabelText("Clave")).toBeInTheDocument();
+    expect(screen.getByLabelText("Contraseña")).toBeInTheDocument();
     expect(leerToken()).toBe("");
   });
 
@@ -78,7 +78,7 @@ describe("acceso", () => {
     await screen.findByText("Un domingo", VISIBLE);
     await userEvent.click(within(document.querySelector("header.cabecera")).getByRole("button", { name: "Bloquear" }));
 
-    expect(screen.getByLabelText("Clave")).toBeInTheDocument();
+    expect(screen.getByLabelText("Contraseña")).toBeInTheDocument();
     expect(screen.queryByText("Un domingo", VISIBLE)).not.toBeInTheDocument();
     expect(leerToken()).toBe("");
   });
@@ -139,9 +139,9 @@ describe("acceso", () => {
     ahora.mockReturnValue(1_000_000 + 4 * 60 * 1000);
     visibilidad.mockReturnValue("visible");
     act(() => document.dispatchEvent(new Event("visibilitychange")));
-    expect(await screen.findByLabelText("Clave")).toBeInTheDocument();
+    expect(await screen.findByLabelText("Contraseña")).toBeInTheDocument();
 
-    await userEvent.type(screen.getByLabelText("Clave"), "p");
+    await userEvent.type(screen.getByLabelText("Contraseña"), "p");
     await userEvent.click(screen.getByRole("button", { name: /entrar/i }));
 
     expect(await screen.findByLabelText("Título")).toHaveValue("A medias");
