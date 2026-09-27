@@ -34,9 +34,13 @@ jobs:
         working-directory: app
         run: npm ci
 
+      # La dirección de la API va en el build: la API exige clave, así que la
+      # dirección sola no da acceso a nada. Se guarda como variable del repo.
       - name: Compilar
         working-directory: app
         run: npm run build
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
 
       - uses: actions/configure-pages@v5
 

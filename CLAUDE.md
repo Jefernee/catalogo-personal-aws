@@ -22,9 +22,8 @@ Web        https://jefernee.github.io/catalogo-personal-aws/
 Región     us-east-1 (Norte de Virginia)
 ```
 
-**La URL de la API y el enlace ya configurado están en `DATOS-PRIVADOS.md`**, que no se
-sube a git: este repositorio es público y la API no tiene autenticación, así que
-publicarla equivaldría a dejar el catálogo y el diario abiertos a cualquiera.
+**Las claves y el enlace ya configurado están en `DATOS-PRIVADOS.md`**, que no se sube a
+git. La URL de la API ya no es secreta: desde que la API exige clave, sin ella no sirve.
 
 Ese archivo también está en `app/.env.local`, y en el gestor de contraseñas.
 
@@ -125,9 +124,10 @@ cd app && npm run dev                     # app en localhost:5173
 Probar la app sin tocar AWS: `python servidor_local.py` y abrir
 `http://localhost:5173/#api=http://localhost:8787&token=local&invitado=local-invitado`.
 
-La app toma la URL de la API de `app/.env.local`, que **no se sube a git** para que el
-build publicado no la lleve dentro. Sin ese archivo, la app la pide una vez y la guarda
-en el navegador.
+La app publicada **lleva la URL de la API dentro**: sale de la variable del repositorio
+`VITE_API_URL`, que usa `.github/workflows/pages.yml` al compilar. Es seguro porque la API
+exige clave: la dirección sola no da acceso. Así, en cualquier aparato la app solo pide la
+clave. En desarrollo local la URL sale de `app/.env.local`.
 
 ---
 
