@@ -373,6 +373,19 @@ export function fechaLarga(iso) {
   return f ? f.toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : "";
 }
 
+/** La fecha arriba de cada hoja: sin el año cuando es el de ahora, como en un diario. */
+export function fechaDeHoja(iso, hoy = new Date()) {
+  const f = fecha(iso);
+  if (!f) return "";
+  const otroAnio = f.getFullYear() !== hoy.getFullYear();
+  return f.toLocaleDateString("es-MX", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    ...(otroAnio && { year: "numeric" }),
+  });
+}
+
 export function fechaCorta(iso) {
   const f = fecha(iso);
   return f ? f.toLocaleDateString("es-MX", { day: "numeric", month: "short" }) : "";
@@ -384,11 +397,15 @@ export const hoyIso = () => {
 };
 
 /**
- * La más reciente primero, por cuándo se escribió (creado_en). La fecha que se
- * elige en la página es lo que se muestra, pero no mueve la página de lugar:
- * igual que en un diario de papel, las hojas quedan en el orden en que se llenaron.
+ * La más reciente primero, por la fecha de la página (la que se ve arriba de
+ * cada hoja). Si dos páginas tienen la misma fecha, va antes la última que se
+ * escribió.
  */
 export function ordenarPaginas(entradas) {
-  const clave = (e) => String(e.creado_en || e.fecha || "");
-  return [...entradas].sort((a, b) => clave(b).localeCompare(clave(a)));
+  const fechaDe = (e) => String(e.fecha || e.creado_en || "").slice(0, 10);
+  return [...entradas].sort(
+    (a, b) =>
+      fechaDe(b).localeCompare(fechaDe(a)) ||
+      String(b.creado_en || "").localeCompare(String(a.creado_en || ""))
+  );
 }

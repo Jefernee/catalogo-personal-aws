@@ -1,7 +1,7 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { EditorPagina, HojaDiario, Libro, aRenglones, contarHojas, repartirEnHojas } from "../diario";
+import { EditorPagina, HojaDiario, Libro } from "../diario";
 import { simularPantalla } from "./pantalla";
 
 const pagina = (n, dia) => ({
@@ -74,7 +74,7 @@ describe("libro en el celular (una página)", () => {
     expect(alEscribir).toHaveBeenCalled();
   });
 
-  it("al escribir una página nueva, el libro vuelve a lo más reciente", async () => {
+  it("al escribir la página de hoy, el libro se abre en ella: es la más reciente", async () => {
     const { rerender } = verLibro();
     await userEvent.click(screen.getByLabelText("Páginas más antiguas"));
     await userEvent.click(screen.getByLabelText("Páginas más antiguas"));
@@ -82,6 +82,27 @@ describe("libro en el celular (una página)", () => {
       <Libro entradas={[...cinco, pagina(6, 26)]} alEscribir={vi.fn()} alEditar={vi.fn()} alBorrar={vi.fn()} />
     );
     expect(titulos()).toEqual(["Página 6"]);
+    expect(screen.getByText(/Página 1 de 6/)).toBeInTheDocument();
+  });
+
+  it("una página de un día pasado no queda primero: se abre donde le toca por su fecha", () => {
+    const { rerender } = verLibro();
+    // Escrita hoy, pero con fecha del día 12: va entre la del 15 y la del 10.
+    const atrasada = { ...pagina(6, 12), creado_en: "2026-09-27T09:00:00Z" };
+    rerender(<Libro entradas={[...cinco, atrasada]} alEscribir={vi.fn()} alEditar={vi.fn()} alBorrar={vi.fn()} />);
+    expect(titulos()).toEqual(["Página 6"]);
+    expect(screen.getByText(/Página 4 de 6/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /volver a lo más reciente/i }));
+    expect(titulos()).toEqual(["Página 5"]);
+  });
+
+  it("los botones de abajo también pasan de hoja, para no subir tras leer", async () => {
+    verLibro();
+    const abajo = within(screen.getByRole("navigation", { name: "Pasar de hoja" }));
+    expect(abajo.getByRole("button", { name: "Más recientes" })).toBeDisabled();
+    await userEvent.click(abajo.getByRole("button", { name: "Más antiguas" }));
+    expect(titulos()).toEqual(["Página 4"]);
   });
 });
 
@@ -101,6 +122,14 @@ describe("libro en escritorio (dos páginas)", () => {
     await userEvent.click(screen.getByLabelText("Páginas más antiguas"));
     expect(titulos()).toEqual(["Página 1"]);
     expect(screen.getByText("Aquí empezó tu diario")).toBeInTheDocument();
+  });
+
+  it("la página escrita se abre en su par de hojas", () => {
+    simularPantalla({ ancha: true });
+    const { rerender } = verLibro();
+    const atrasada = { ...pagina(6, 12), creado_en: "2026-09-27T09:00:00Z" };
+    rerender(<Libro entradas={[...cinco, atrasada]} alEscribir={vi.fn()} alEditar={vi.fn()} alBorrar={vi.fn()} />);
+    expect(titulos()).toEqual(["Página 3", "Página 6"]);
   });
 
   it("las flechas del teclado pasan de página", () => {
@@ -155,6 +184,14 @@ describe("editor de página", () => {
     expect(screen.getByLabelText("Título")).toHaveFocus();
   });
 
+  it("Enter en el título pasa a escribir el día, no guarda a medias", async () => {
+    const alGuardar = vi.fn();
+    render(<EditorPagina alCerrar={vi.fn()} alGuardar={alGuardar} />);
+    await userEvent.type(screen.getByLabelText("Título"), "Un buen día{Enter}");
+    expect(alGuardar).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Contenido")).toHaveFocus();
+  });
+
   it("Escape cierra el editor", () => {
     const alCerrar = vi.fn();
     render(<EditorPagina alCerrar={alCerrar} alGuardar={vi.fn()} />);
@@ -163,64 +200,54 @@ describe("editor de página", () => {
   });
 });
 
-describe("hojas: una nota larga continúa en la siguiente", () => {
-  it("cuenta cuántas columnas del ancho de la hoja ocupó el texto", () => {
-    // Columnas de 400 px separadas por 60 px: 1 hoja = 400, 3 hojas = 400*3 + 60*2.
-    expect(contarHojas(400, 400)).toBe(1);
-    expect(contarHojas(400 * 3 + 60 * 2, 400)).toBe(3);
-    // Sin medidas (antes de maquetar) siempre hay al menos una hoja.
-    expect(contarHojas(0, 0)).toBe(1);
+describe("una hoja por día", () => {
+  const larga = Array.from({ length: 120 }, (_, n) => `Renglón ${n + 1} de un día muy largo.`).join("\n");
+
+  it("una nota larga va entera en su hoja: no se parte en varias", () => {
+    verLibro([{ ...pagina(1, 5), contenido: larga }]);
+    expect(screen.getByText(/Página 1 de 1/)).toBeInTheDocument();
+    expect(document.querySelectorAll(".pagina")).toHaveLength(1);
+    expect(document.querySelector(".pagina-texto").textContent).toBe(larga);
+    expect(screen.queryByText(/continuación|continúa/)).not.toBeInTheDocument();
   });
 
-  it("reparte cada nota en sus hojas, en orden", () => {
-    const hojas = repartirEnHojas([pagina(2, 10), pagina(1, 5)], { p2: { total: 3 } });
-    expect(hojas.map((h) => `${h.entrada.item_id}:${h.parte}/${h.total}`)).toEqual([
-      "p2:0/3", "p2:1/3", "p2:2/3", "p1:0/1",
-    ]);
+  it("la hoja lleva la fecha del día y su número", () => {
+    render(<HojaDiario entrada={pagina(1, 5)} numero={3} lado="sola" alEditar={vi.fn()} alBorrar={vi.fn()} />);
+    expect(document.querySelector("time")).toHaveAttribute("dateTime", "2026-09-05");
+    expect(screen.getByText("3")).toHaveClass("pagina-numero");
   });
 
-  it("el alto del texto se redondea a renglones completos", () => {
-    expect(aRenglones(455)).toBe(450);
-    expect(aRenglones(480)).toBe(480);
-    expect(aRenglones(50)).toBe(120); // nunca menos de 4 renglones
-  });
-
-  it("la primera hoja lleva la fecha; las siguientes, 'continuación'", () => {
-    const nota = pagina(1, 5);
-    const { rerender } = render(
-      <HojaDiario hoja={{ entrada: nota, parte: 0, total: 3 }} numero={1} lado="sola"
-        alEditar={vi.fn()} alBorrar={vi.fn()} />
-    );
-    expect(document.querySelector("time")).toBeInTheDocument();
-    expect(screen.getByText(/continúa/)).toBeInTheDocument();
-
-    rerender(
-      <HojaDiario hoja={{ entrada: nota, parte: 2, total: 3 }} numero={3} lado="sola"
-        alEditar={vi.fn()} alBorrar={vi.fn()} />
-    );
-    expect(screen.getByText("Página 1 · continuación")).toBeInTheDocument();
-    // La última hoja de la nota ya no dice "continúa".
-    expect(screen.queryByText(/continúa/)).not.toBeInTheDocument();
-  });
-
-  it("una hoja de continuación muestra su trozo desplazando el texto", () => {
-    render(
-      <HojaDiario hoja={{ entrada: pagina(1, 5), parte: 2, total: 3 }} numero={3} lado="sola"
-        medida={{ total: 3, ancho: 400, alto: 450 }} alEditar={vi.fn()} alBorrar={vi.fn()} />
-    );
-    const flujo = document.querySelector(".hoja-flujo");
-    expect(flujo.style.transform).toBe("translateX(-920px)"); // 2 × (400 + 60)
-    expect(flujo).toHaveAttribute("aria-hidden", "true"); // el lector de pantalla la lee una vez
-  });
-
-  it("editar desde cualquier hoja abre la nota completa", async () => {
+  it("editar desde la hoja abre la nota completa", async () => {
     const alEditar = vi.fn();
-    const nota = pagina(1, 5);
-    render(
-      <HojaDiario hoja={{ entrada: nota, parte: 1, total: 2 }} numero={2} lado="sola"
-        alEditar={alEditar} alBorrar={vi.fn()} />
-    );
+    const nota = { ...pagina(1, 5), contenido: larga };
+    render(<HojaDiario entrada={nota} numero={1} lado="sola" alEditar={alEditar} alBorrar={vi.fn()} />);
     await userEvent.click(screen.getByLabelText("Editar Página 1"));
     expect(alEditar).toHaveBeenCalledWith(nota);
+  });
+
+  it("si se bajó leyendo, la hoja siguiente se ve desde arriba", () => {
+    const subir = vi.fn();
+    Element.prototype.scrollIntoView = subir;
+    try {
+      verLibro();
+      // El libro quedó por encima de la pantalla: se había bajado hasta el final de la nota.
+      vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({ top: -900 });
+      fireEvent.click(screen.getByLabelText("Páginas más antiguas"));
+      expect(subir).toHaveBeenCalledWith({ block: "start" });
+    } finally {
+      delete Element.prototype.scrollIntoView;
+    }
+  });
+
+  it("sin haber bajado, pasar de hoja no mueve la pantalla", () => {
+    const subir = vi.fn();
+    Element.prototype.scrollIntoView = subir;
+    try {
+      verLibro();
+      fireEvent.click(screen.getByLabelText("Páginas más antiguas"));
+      expect(subir).not.toHaveBeenCalled();
+    } finally {
+      delete Element.prototype.scrollIntoView;
+    }
   });
 });

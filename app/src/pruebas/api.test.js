@@ -9,6 +9,7 @@ import {
   marcarOculta,
   migrarSesionAntigua,
   etiquetaEstado,
+  fechaDeHoja,
   guardarSesion,
   hoyIso,
   leerInvitado,
@@ -149,14 +150,28 @@ describe("tareas y compras", () => {
 });
 
 describe("diario", () => {
-  it("la página más reciente va primero, por cuándo se escribió", () => {
+  it("la página más reciente va primero, según la fecha de la página", () => {
     const paginas = ordenarPaginas([
-      { titulo: "vieja", creado_en: "2026-09-10T10:00:00Z", fecha: "2026-09-10" },
-      // Escrita hoy pero con fecha de la semana pasada: igual va primero.
-      { titulo: "nueva", creado_en: "2026-09-26T10:00:00Z", fecha: "2026-09-19" },
-      { titulo: "media", creado_en: "2026-09-18T10:00:00Z", fecha: "2026-09-18" },
+      { titulo: "diez", fecha: "2026-09-10", creado_en: "2026-09-26T10:00:00Z" },
+      // Escrita el 26 pero con fecha del 20: va según su fecha, no según cuándo se escribió.
+      { titulo: "veinte", fecha: "2026-09-20", creado_en: "2026-09-26T11:00:00Z" },
+      { titulo: "veintisiete", fecha: "2026-09-27", creado_en: "2026-09-27T09:00:00Z" },
     ]);
-    expect(paginas.map((p) => p.titulo)).toEqual(["nueva", "media", "vieja"]);
+    expect(paginas.map((p) => p.titulo)).toEqual(["veintisiete", "veinte", "diez"]);
+  });
+
+  it("con la misma fecha, va antes la última que se escribió", () => {
+    const paginas = ordenarPaginas([
+      { titulo: "mañana", fecha: "2026-09-27", creado_en: "2026-09-27T08:00:00Z" },
+      { titulo: "noche", fecha: "2026-09-27", creado_en: "2026-09-27T22:00:00Z" },
+    ]);
+    expect(paginas.map((p) => p.titulo)).toEqual(["noche", "mañana"]);
+  });
+
+  it("la fecha de la hoja no repite el año de ahora; la de otro año, sí", () => {
+    const hoy = new Date(2026, 8, 27);
+    expect(fechaDeHoja("2026-09-27", hoy)).toBe("domingo, 27 de septiembre");
+    expect(fechaDeHoja("2025-12-31", hoy)).toContain("2025");
   });
 
   it("la fecha de hoy es la local, no la de UTC", () => {
@@ -199,7 +214,7 @@ describe("bloqueo por inactividad", () => {
     expect(debeBloquearse(1_000_000 + BLOQUEO_MS - 1)).toBe(false);
   });
 
-  it("bloquea si estuvo más de 5 minutos sin verse", () => {
+  it("bloquea si estuvo más de 3 minutos sin verse", () => {
     marcarOculta(1_000_000);
     expect(debeBloquearse(1_000_000 + BLOQUEO_MS + 1)).toBe(true);
   });

@@ -43,13 +43,21 @@
   --letra: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --letra-libro: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
 
-  /* Papel: la tinta y los tonos de las páginas del diario. */
+  /* Papel: la tinta, los cantos y las sombras de las páginas del diario. */
   --papel-canto: #e7e0d0;
   --papel-canto-2: #ddd5c3;
+  --papel-hoja: #ffffff;
+  --sombra-pagina: rgba(35, 30, 60, 0.16);
+  --sombra-lomo: rgba(40, 30, 20, 0.34);
+  --sombra-libro: rgba(35, 30, 60, 0.18);
+  --portada-hojas: #d9cfb9;
+  --portada-hojas-2: #c7bca4;
   --tinta: #2b2620;
   --tinta-suave: #7c7163;
   --renglon: 30px;
-  --brillo-pagina: 1;
+  --renglon-color: rgba(66, 110, 200, 0.26);
+  --pagina-realce: rgba(60, 40, 20, 0.08);
+  --muestra-borde: rgba(0, 0, 0, 0.14);
 }
 
 /* Paleta oscura: cuando el sistema está en oscuro y el usuario no pidió
@@ -80,9 +88,19 @@
     --sombra-1: 0 1px 2px rgba(0, 0, 0, 0.4), 0 2px 10px rgba(0, 0, 0, 0.3);
     --sombra-2: 0 2px 8px rgba(0, 0, 0, 0.45), 0 12px 28px rgba(0, 0, 0, 0.4);
     --sombra-3: 0 14px 44px rgba(0, 0, 0, 0.6);
-    --papel-canto: #b9b1a1;
-    --papel-canto-2: #a39b8b;
-    --brillo-pagina: 0.93;
+    /* De noche el papel también es de noche: cantos y sombras oscuros, y cada
+       fondo toma su versión oscura (ver "Fondos de página"). */
+    --papel-canto: #0b0c15;
+    --papel-canto-2: #08090f;
+    --papel-hoja: #2b2b33;
+    --sombra-pagina: rgba(0, 0, 0, 0.5);
+    --sombra-lomo: rgba(0, 0, 0, 0.55);
+    --sombra-libro: rgba(0, 0, 0, 0.45);
+    --portada-hojas: #4a4539;
+    --portada-hojas-2: #3a362d;
+    --renglon-color: rgba(135, 160, 235, 0.2);
+    --pagina-realce: rgba(255, 255, 255, 0.08);
+    --muestra-borde: rgba(255, 255, 255, 0.2);
   }
 }
 
@@ -111,11 +129,23 @@
   --sombra-1: 0 1px 2px rgba(0, 0, 0, 0.4), 0 2px 10px rgba(0, 0, 0, 0.3);
   --sombra-2: 0 2px 8px rgba(0, 0, 0, 0.45), 0 12px 28px rgba(0, 0, 0, 0.4);
   --sombra-3: 0 14px 44px rgba(0, 0, 0, 0.6);
-  --papel-canto: #b9b1a1;
-  --papel-canto-2: #a39b8b;
-  /* Las páginas siguen siendo papel, como un libro bajo una lámpara: solo bajan un poco. */
-  --brillo-pagina: 0.93;
+  /* De noche el papel también es de noche: cantos y sombras oscuros, y cada
+     fondo toma su versión oscura (ver "Fondos de página"). */
+  --papel-canto: #0b0c15;
+  --papel-canto-2: #08090f;
+  --papel-hoja: #2b2b33;
+  --sombra-pagina: rgba(0, 0, 0, 0.5);
+  --sombra-lomo: rgba(0, 0, 0, 0.55);
+  --sombra-libro: rgba(0, 0, 0, 0.45);
+  --portada-hojas: #4a4539;
+  --portada-hojas-2: #3a362d;
+  --renglon-color: rgba(135, 160, 235, 0.2);
+  --pagina-realce: rgba(255, 255, 255, 0.08);
+  --muestra-borde: rgba(255, 255, 255, 0.2);
 }
+
+/* Claro elegido a mano: el navegador no debe oscurecer la página por su cuenta. */
+:root[data-tema="claro"] { color-scheme: only light; }
 
 /* ==========================================================================
    Base
@@ -502,7 +532,7 @@ a { color: var(--acento); }
   grid-template-columns: 1fr 1fr;
   max-width: 1000px;
   /* La sombra de todo el libro sobre la mesa. */
-  filter: drop-shadow(0 18px 30px rgba(35, 30, 60, 0.18));
+  filter: drop-shadow(0 18px 30px var(--sombra-libro));
 }
 
 .pagina {
@@ -512,16 +542,15 @@ a { color: var(--acento); }
   padding: 34px 38px 54px;
   color: var(--tinta);
   background: var(--pagina-fondo);
-  filter: brightness(var(--brillo-pagina));
   border-radius: 6px;
   /* El canto del papel: tres hojas asomando por el borde. */
   box-shadow:
     1px 1px 0 var(--papel-canto),
-    2px 2px 0 #fff,
+    2px 2px 0 var(--papel-hoja),
     3px 3px 0 var(--papel-canto),
-    4px 4px 0 #fff,
+    4px 4px 0 var(--papel-hoja),
     5px 5px 0 var(--papel-canto-2),
-    8px 10px 22px rgba(35, 30, 60, 0.16);
+    8px 10px 22px var(--sombra-pagina);
   display: flex;
   flex-direction: column;
   overflow-wrap: anywhere;
@@ -532,21 +561,21 @@ a { color: var(--acento); }
   border-radius: 8px 2px 2px 8px;
   box-shadow:
     -1px 1px 0 var(--papel-canto),
-    -2px 2px 0 #fff,
+    -2px 2px 0 var(--papel-hoja),
     -3px 3px 0 var(--papel-canto),
-    -4px 4px 0 #fff,
+    -4px 4px 0 var(--papel-hoja),
     -5px 5px 0 var(--papel-canto-2),
-    inset -28px 0 34px -26px rgba(40, 30, 20, 0.34);
+    inset -28px 0 34px -26px var(--sombra-lomo);
 }
 .pagina--derecha {
   border-radius: 2px 8px 8px 2px;
   box-shadow:
     1px 1px 0 var(--papel-canto),
-    2px 2px 0 #fff,
+    2px 2px 0 var(--papel-hoja),
     3px 3px 0 var(--papel-canto),
-    4px 4px 0 #fff,
+    4px 4px 0 var(--papel-hoja),
     5px 5px 0 var(--papel-canto-2),
-    inset 28px 0 34px -26px rgba(40, 30, 20, 0.34);
+    inset 28px 0 34px -26px var(--sombra-lomo);
 }
 .libro-abierto--doble .pagina { min-height: 620px; }
 
@@ -567,7 +596,7 @@ a { color: var(--acento); }
 .pagina-herramientas { display: flex; gap: 2px; opacity: .55; transition: opacity .15s; }
 .pagina:hover .pagina-herramientas, .pagina:focus-within .pagina-herramientas { opacity: 1; }
 .pagina .btn--sutil, .pagina .btn--peligro { color: var(--tinta-suave); }
-.pagina .btn--sutil:hover { background: rgba(60, 40, 20, 0.08); color: var(--tinta); }
+.pagina .btn--sutil:hover { background: var(--pagina-realce); color: var(--tinta); }
 
 .pagina-titulo {
   font-family: var(--letra-libro);
@@ -644,7 +673,7 @@ a { color: var(--acento); }
   background:
     linear-gradient(90deg, rgba(0, 0, 0, 0.28) 0 14px, rgba(255, 255, 255, 0.07) 14px 17px, transparent 17px),
     radial-gradient(120% 90% at 30% 20%, #4a5bd6, #2b3590 60%, #1d2466);
-  box-shadow: 6px 8px 0 -2px #d9cfb9, 8px 11px 0 -3px #c7bca4, 14px 22px 40px rgba(20, 20, 60, 0.35);
+  box-shadow: 6px 8px 0 -2px var(--portada-hojas), 8px 11px 0 -3px var(--portada-hojas-2), 14px 22px 40px rgba(20, 20, 60, 0.35);
 }
 .portada h2 { font-family: var(--letra-libro); font-style: italic; font-size: 34px; margin: 0; letter-spacing: 0.01em; }
 .portada p { margin: 0 0 12px; opacity: .8; font-family: var(--letra-libro); }
@@ -654,27 +683,42 @@ a { color: var(--acento); }
 
 /* ==========================================================================
    Fondos de página
+   Cada fondo tiene su versión de día y su versión de noche (las variables que
+   terminan en -oscuro u -oscura). Con el teléfono en oscuro, la hoja se vuelve
+   de noche en lugar de quedarse blanca y encandilar.
    ========================================================================== */
 
 .fondo-papel {
   --pagina-fondo: radial-gradient(130% 110% at 50% 40%, #fffefa 0%, #fbf6ea 100%);
+  /* Grafito cálido, como papel bajo una lámpara. */
+  --pagina-fondo-oscuro: radial-gradient(120% 90% at 50% 25%, #302d2b 0%, #252321 60%, #1f1d1b 100%);
 }
 .fondo-crema {
   --pagina-fondo: radial-gradient(130% 110% at 50% 35%, #fcf5e4 0%, #f1e4c6 100%);
   --tinta: #33291c;
+  --pagina-fondo-oscuro: radial-gradient(120% 90% at 50% 25%, #3b3226 0%, #2e271e 60%, #262019 100%);
+  --tinta-oscura: #f1e5ce;
+  --tinta-suave-oscura: #b9a684;
 }
 .fondo-rayado {
   --pagina-fondo:
     linear-gradient(90deg, transparent 50px, rgba(214, 72, 72, 0.4) 50px 51.5px, transparent 51.5px),
     #fdfdfb;
+  --muestra-fondo: repeating-linear-gradient(to bottom, #fdfdfb 0 7px, rgba(66, 110, 200, 0.4) 7px 8px);
+  --pagina-fondo-oscuro:
+    linear-gradient(90deg, transparent 50px, rgba(240, 115, 115, 0.45) 50px 51.5px, transparent 51.5px),
+    #202229;
+  --muestra-fondo-oscuro: repeating-linear-gradient(to bottom, #202229 0 7px, rgba(135, 160, 235, 0.55) 7px 8px);
+  --tinta-oscura: #e8eaf2;
+  --tinta-suave-oscura: #9ea3b8;
 }
-.fondo-rayado .hoja-ventana,
+.fondo-rayado .pagina-cuerpo,
 .fondo-rayado textarea.pagina-texto {
-  /* Un renglón por línea de texto: la línea azul queda justo bajo cada frase. */
+  /* Un renglón por línea de texto: la línea queda justo bajo cada frase. */
   background: repeating-linear-gradient(
     to bottom,
     transparent 0 calc(var(--renglon) - 1px),
-    rgba(66, 110, 200, 0.26) calc(var(--renglon) - 1px) var(--renglon)
+    var(--renglon-color) calc(var(--renglon) - 1px) var(--renglon)
   );
   background-attachment: local;
 }
@@ -684,34 +728,82 @@ a { color: var(--acento); }
     linear-gradient(rgba(62, 100, 180, 0.11) 1px, transparent 1px) 0 0 / 22px 22px,
     linear-gradient(90deg, rgba(62, 100, 180, 0.11) 1px, transparent 1px) 0 0 / 22px 22px,
     #fcfdff;
+  --pagina-fondo-oscuro:
+    linear-gradient(rgba(135, 160, 235, 0.12) 1px, transparent 1px) 0 0 / 22px 22px,
+    linear-gradient(90deg, rgba(135, 160, 235, 0.12) 1px, transparent 1px) 0 0 / 22px 22px,
+    #1f2129;
+  --tinta-oscura: #e8eaf2;
+  --tinta-suave-oscura: #9ea3b8;
 }
 .fondo-lino {
   --pagina-fondo:
     repeating-linear-gradient(0deg, rgba(120, 100, 70, 0.06) 0 1px, transparent 1px 3px),
     repeating-linear-gradient(90deg, rgba(120, 100, 70, 0.06) 0 1px, transparent 1px 3px),
     #f3eee4;
+  --pagina-fondo-oscuro:
+    repeating-linear-gradient(0deg, rgba(255, 235, 205, 0.022) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(255, 235, 205, 0.022) 0 1px, transparent 1px 3px),
+    #2a2621;
 }
-.fondo-rosa { --pagina-fondo: linear-gradient(165deg, #fff4f6 0%, #fbe1e8 100%); --tinta: #3b2229; --tinta-suave: #946572; }
-.fondo-menta { --pagina-fondo: linear-gradient(165deg, #f1fbf6 0%, #d9f0e4 100%); --tinta: #1f3129; --tinta-suave: #5f8474; }
+.fondo-rosa {
+  --pagina-fondo: linear-gradient(165deg, #fff4f6 0%, #fbe1e8 100%);
+  --tinta: #3b2229; --tinta-suave: #946572;
+  --pagina-fondo-oscuro: linear-gradient(165deg, #37232c 0%, #2a1a22 100%);
+  --tinta-oscura: #f9e6ed; --tinta-suave-oscura: #cb9cac;
+}
+.fondo-menta {
+  --pagina-fondo: linear-gradient(165deg, #f1fbf6 0%, #d9f0e4 100%);
+  --tinta: #1f3129; --tinta-suave: #5f8474;
+  --pagina-fondo-oscuro: linear-gradient(165deg, #1c3029 0%, #15251f 100%);
+  --tinta-oscura: #e0f4eb; --tinta-suave-oscura: #8eb9a6;
+}
 .fondo-cielo {
   --pagina-fondo:
     radial-gradient(60% 40% at 80% 12%, rgba(255, 255, 255, 0.85), transparent 70%),
     linear-gradient(175deg, #eef6ff 0%, #d9e7fb 100%);
   --tinta: #1d2a40; --tinta-suave: #607494;
+  --pagina-fondo-oscuro:
+    radial-gradient(60% 40% at 80% 12%, rgba(160, 195, 255, 0.12), transparent 70%),
+    linear-gradient(175deg, #1c2943 0%, #162036 100%);
+  --tinta-oscura: #e4edfc; --tinta-suave-oscura: #97abce;
 }
-.fondo-lavanda { --pagina-fondo: linear-gradient(165deg, #f7f2ff 0%, #e6ddfa 100%); --tinta: #2c2441; --tinta-suave: #7a6e98; }
+.fondo-lavanda {
+  --pagina-fondo: linear-gradient(165deg, #f7f2ff 0%, #e6ddfa 100%);
+  --tinta: #2c2441; --tinta-suave: #7a6e98;
+  --pagina-fondo-oscuro: linear-gradient(165deg, #2c2543 0%, #221c37 100%);
+  --tinta-oscura: #eee7fd; --tinta-suave-oscura: #ab9fd0;
+}
+/* La noche ya es oscura: es la misma de día y de noche. */
 .fondo-noche {
-  --pagina-fondo:
+  --cielo-estrellado:
     radial-gradient(1.2px 1.2px at 12% 18%, rgba(255, 255, 255, 0.8), transparent 60%),
     radial-gradient(1px 1px at 78% 12%, rgba(255, 255, 255, 0.7), transparent 60%),
     radial-gradient(1.4px 1.4px at 88% 42%, rgba(255, 255, 255, 0.55), transparent 60%),
     radial-gradient(1px 1px at 30% 70%, rgba(255, 255, 255, 0.5), transparent 60%),
     radial-gradient(1.2px 1.2px at 62% 86%, rgba(255, 255, 255, 0.6), transparent 60%),
     radial-gradient(120% 90% at 50% 0%, #2a3160, #171b33 70%);
-  --tinta: #ecedf8;
-  --tinta-suave: #9ea5cc;
+  --pagina-fondo: var(--cielo-estrellado);
+  --pagina-fondo-oscuro: var(--cielo-estrellado);
+  --tinta: #ecedf8; --tinta-suave: #9ea5cc;
+  --tinta-oscura: #ecedf8; --tinta-suave-oscura: #9ea5cc;
+  --pagina-realce: rgba(255, 255, 255, 0.1);
 }
-.fondo-noche .btn--sutil:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+
+/* De noche, cada hoja y cada muestra toman la versión oscura de su fondo. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema="claro"]) :is(.pagina, .muestra) {
+    --pagina-fondo: var(--pagina-fondo-oscuro, #24232a);
+    --muestra-fondo: var(--muestra-fondo-oscuro, var(--pagina-fondo-oscuro, #24232a));
+    --tinta: var(--tinta-oscura, #eee8df);
+    --tinta-suave: var(--tinta-suave-oscura, #a9a197);
+  }
+}
+:root[data-tema="oscuro"] :is(.pagina, .muestra) {
+  --pagina-fondo: var(--pagina-fondo-oscuro, #24232a);
+  --muestra-fondo: var(--muestra-fondo-oscuro, var(--pagina-fondo-oscuro, #24232a));
+  --tinta: var(--tinta-oscura, #eee8df);
+  --tinta-suave: var(--tinta-suave-oscura, #a9a197);
+}
 
 /* ==========================================================================
    Hoja: formularios (pantalla completa en el celular, diálogo en escritorio)
@@ -827,8 +919,8 @@ a { color: var(--acento); }
   flex: none;
   width: 36px; height: 36px;
   border-radius: 50%;
-  background: var(--pagina-fondo);
-  border: 1px solid rgba(0, 0, 0, 0.14);
+  background: var(--muestra-fondo, var(--pagina-fondo));
+  border: 1px solid var(--muestra-borde);
   cursor: pointer;
   transition: transform .14s, box-shadow .14s;
 }
@@ -836,7 +928,6 @@ a { color: var(--acento); }
 .muestra input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
 .muestra:has(input:checked) { box-shadow: 0 0 0 2px var(--superficie), 0 0 0 4px var(--acento); }
 .muestra:has(input:focus-visible) { box-shadow: 0 0 0 2px var(--superficie), 0 0 0 4px var(--acento), var(--anillo); }
-.muestra.fondo-rayado.muestra { background: repeating-linear-gradient(to bottom, #fdfdfb 0 7px, rgba(66, 110, 200, 0.4) 7px 8px); }
 
 .pagina--editor {
   min-height: 460px;
@@ -1126,98 +1217,35 @@ code {
 }
 
 /* ==========================================================================
-   Hojas: una nota larga continúa en la hoja siguiente
+   Cuerpo de la hoja: un día entero. Si la nota es larga, la hoja crece y se
+   lee bajando; no se parte en varias hojas.
    ========================================================================== */
-
-/* La hoja tiene alto fijo (lo calcula el libro según la pantalla). */
-.pagina--hoja {
-  min-height: 0;
-  padding-bottom: 4px;
-}
-.libro-abierto--doble .pagina--hoja { min-height: 0; }
-
-.pagina--hoja .pagina-cabeza {
-  flex: none;
-  height: 40px;
-  margin: 0;
-}
-
-/* La ventana deja ver una sola columna del flujo de la nota. */
-.hoja-ventana {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: hidden;
-  position: relative;
-}
-.hoja-flujo {
-  height: 100%;
-  column-gap: 60px;
-  column-fill: auto;
-}
 
 /* Todo cae en renglones de 30 px: el título ocupa uno y deja otro en blanco,
    así el texto empieza siempre sobre una línea del rayado. */
-.hoja-flujo .pagina-titulo {
+.pagina-cuerpo { flex: 1; }
+.pagina-cuerpo .pagina-titulo {
   font-size: 25px;
   line-height: var(--renglon);
   margin: 0 0 var(--renglon);
-  break-after: avoid;
-}
-.hoja-flujo .pagina-texto {
-  line-height: var(--renglon);
-  orphans: 2;
-  widows: 2;
 }
 
-.pagina-continua {
-  margin-right: auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: var(--letra-libro);
-  font-style: italic;
-  font-size: 13.5px;
-  color: var(--tinta-suave);
-}
+/* Al volver arriba tras leer una nota larga, el encabezado fijo no tapa los controles. */
+.libro { position: relative; scroll-margin-top: calc(72px + env(safe-area-inset-top, 0px)); }
 
-.pagina-pie {
-  flex: none;
-  height: 44px;
+/* Pasar de hoja al terminar de leer, sin subir hasta las flechas. */
+.libro-pie {
   display: flex;
-  align-items: center;
   justify-content: center;
-  font-family: var(--letra-libro);
-  font-style: italic;
-  font-size: 13px;
-  color: var(--tinta-suave);
+  gap: 10px;
+  margin-top: 22px;
 }
-.pagina--hoja .pagina-numero { position: static; }
-.pagina-sigue { white-space: pre; }
-
-/* Donde se mide: maquetado de verdad, pero fuera de la vista. Fijo y sin alto,
-   para que las hojas medidas no alarguen la página ni le agreguen scroll. */
-.medidor {
-  position: fixed;
-  top: 0;
-  left: -10000px;
-  height: 0;
-  overflow: hidden;
-  visibility: hidden;
-  pointer-events: none;
-}
-.libro { position: relative; }
 
 @media (max-width: 899px) {
-  .pagina--hoja { min-height: 0; padding: 20px 22px 2px; }
-  .fondo-rayado.pagina--hoja { padding-left: 60px; }
-  .hoja-flujo .pagina-titulo { font-size: 22px; }
-  .pagina--hoja .pagina-pie { height: 48px; }
-}
-
-/* En el celular la hoja llena la pantalla: la página no necesita espacio extra abajo. */
-@media (max-width: 899px) {
-  .envoltura--diario { padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+  .fondo-rayado.pagina { padding-left: 60px; }
+  .pagina-cuerpo .pagina-titulo { font-size: 22px; }
+  /* Espacio para que el botón flotante no tape los de pasar de hoja. */
+  .envoltura--diario { padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px)); }
 }
 
 /* En el celular el botón flotante es un círculo: no tapa el pie de la hoja. */

@@ -1,8 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { ModalCompartir, PantallaAcceso, enlaceWhatsApp, mensajeInvitacion, ocultarClave } from "../acceso";
+import { ModalAjustes, ModalCompartir, PantallaAcceso, enlaceWhatsApp, mensajeInvitacion, ocultarClave } from "../acceso";
 import { DUENO, guardarSesion, leerToken } from "../api";
+import { simularPantalla } from "./pantalla";
 
 const API = "https://abc123.execute-api.us-east-1.amazonaws.com";
 const responder = (status, cuerpo = {}) =>
@@ -119,5 +120,24 @@ describe("compartir", () => {
     expect(vista).not.toHaveTextContent("secreta-123");
     await userEvent.click(screen.getByRole("button", { name: /mostrar contraseña/i }));
     expect(vista).toHaveTextContent("secreta-123");
+  });
+});
+
+describe("ajustes: apariencia", () => {
+  const ajustes = (tema) =>
+    render(
+      <ModalAjustes tema={tema} alElegirTema={vi.fn()} alCerrar={vi.fn()} alSalir={vi.fn()}
+        items={[]} alRespaldarEnNube={vi.fn()} avisar={vi.fn()} />
+    );
+
+  it("según el teléfono, dice en qué modo está: así se nota si el navegador no lo sigue", () => {
+    simularPantalla({ oscuro: true });
+    ajustes("sistema");
+    expect(screen.getByText(/Tu teléfono está en modo oscuro, y la app también/)).toBeInTheDocument();
+  });
+
+  it("con un tema fijo, avisa que no cambia con el teléfono", () => {
+    ajustes("claro");
+    expect(screen.getByText(/Siempre en claro, aunque cambies el modo del teléfono/)).toBeInTheDocument();
   });
 });

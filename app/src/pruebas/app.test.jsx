@@ -1,12 +1,10 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import App from "../App";
 import { guardarSesion, leerToken } from "../api";
 
 const API = "https://abc123.execute-api.us-east-1.amazonaws.com";
-// El libro mide sus hojas con una copia oculta del texto: las consultas la ignoran.
-const VISIBLE = { ignore: ".medidor *, script, style" };
 
 const ITEMS = [
   { item_id: "d1", tipo: "diario", titulo: "Un domingo", contenido: "Salí a caminar", fecha: "2026-09-20", creado_en: "2026-09-20T10:00:00Z" },
@@ -75,11 +73,11 @@ describe("acceso", () => {
     guardarSesion({ url: API, token: "p", invitado: "i" });
     apiFalsa();
     render(<App />);
-    await screen.findByText("Un domingo", VISIBLE);
+    await screen.findByText("Un domingo");
     await userEvent.click(within(document.querySelector("header.cabecera")).getByRole("button", { name: "Bloquear" }));
 
     expect(screen.getByLabelText("Contraseña")).toBeInTheDocument();
-    expect(screen.queryByText("Un domingo", VISIBLE)).not.toBeInTheDocument();
+    expect(screen.queryByText("Un domingo")).not.toBeInTheDocument();
     expect(leerToken()).toBe("");
   });
 
@@ -87,7 +85,7 @@ describe("acceso", () => {
     guardarSesion({ url: API, token: "p" });
     apiFalsa();
     render(<App />);
-    await screen.findByText("Un domingo", VISIBLE);
+    await screen.findByText("Un domingo");
 
     const visibilidad = vi.spyOn(document, "visibilityState", "get");
     const ahora = vi.spyOn(Date, "now").mockReturnValue(1_000_000);
@@ -106,7 +104,7 @@ describe("acceso", () => {
     guardarSesion({ url: API, token: "p" });
     apiFalsa();
     render(<App />);
-    await screen.findByText("Un domingo", VISIBLE);
+    await screen.findByText("Un domingo");
 
     const visibilidad = vi.spyOn(document, "visibilityState", "get");
     const ahora = vi.spyOn(Date, "now").mockReturnValue(1_000_000);
@@ -116,7 +114,7 @@ describe("acceso", () => {
     visibilidad.mockReturnValue("visible");
     act(() => document.dispatchEvent(new Event("visibilitychange")));
 
-    expect(screen.getByText("Un domingo", VISIBLE)).toBeInTheDocument();
+    expect(screen.getByText("Un domingo")).toBeInTheDocument();
     expect(leerToken()).toBe("p");
   });
 
@@ -124,7 +122,7 @@ describe("acceso", () => {
     guardarSesion({ url: API, token: "p" });
     apiFalsa();
     render(<App />);
-    await screen.findByText("Un domingo", VISIBLE);
+    await screen.findByText("Un domingo");
 
     await userEvent.click(screen.getByRole("button", { name: /nueva página/i }));
     await userEvent.type(screen.getByLabelText("Título"), "A medias");
@@ -156,7 +154,7 @@ describe("con sesión", () => {
     apiFalsa();
     render(<App />);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Mi diario");
-    expect(await screen.findByText("Un domingo", VISIBLE)).toBeInTheDocument();
+    expect(await screen.findByText("Un domingo")).toBeInTheDocument();
   });
 
   it("en el encabezado va Compartir, no Exportar", async () => {
@@ -174,9 +172,9 @@ describe("con sesión", () => {
     render(<App />);
     await userEvent.click(await screen.findByRole("tab", { name: /listas/i }));
 
-    expect(screen.getByText("Pagar la luz", VISIBLE)).toBeInTheDocument();
-    expect(screen.getByText("Café", VISIBLE)).toBeInTheDocument();
-    const porHacer = screen.getByText("Por hacer", VISIBLE).closest(".metrica");
+    expect(screen.getByText("Pagar la luz")).toBeInTheDocument();
+    expect(screen.getByText("Café")).toBeInTheDocument();
+    const porHacer = screen.getByText("Por hacer").closest(".metrica");
     expect(porHacer).toHaveTextContent("1");
   });
 
@@ -186,10 +184,10 @@ describe("con sesión", () => {
     render(<App />);
     await userEvent.click(await screen.findByRole("tab", { name: /listas/i }));
 
-    const tarjeta = screen.getByText("Café", VISIBLE).closest(".tarjeta");
+    const tarjeta = screen.getByText("Café").closest(".tarjeta");
     await userEvent.click(within(tarjeta).getByRole("button", { name: "Comprado" }));
 
-    await waitFor(() => expect(screen.getByText("Café", VISIBLE).closest(".tarjeta")).toHaveClass("tarjeta--hecha"));
+    await waitFor(() => expect(screen.getByText("Café").closest(".tarjeta")).toHaveClass("tarjeta--hecha"));
     const put = fetch.mock.calls.find(([, o]) => o?.method === "PUT");
     expect(JSON.parse(put[1].body)).toEqual({ estado: "terminado" });
   });
@@ -198,17 +196,37 @@ describe("con sesión", () => {
     guardarSesion({ url: API, token: "p" });
     apiFalsa();
     render(<App />);
-    await screen.findByText("Un domingo", VISIBLE);
+    await screen.findByText("Un domingo");
 
     await userEvent.click(screen.getByRole("button", { name: /nueva página/i }));
     await userEvent.type(screen.getByLabelText("Título"), "Hoy");
     await userEvent.click(screen.getByLabelText("Lavanda"));
     await userEvent.click(screen.getByRole("button", { name: "Guardar" }));
 
-    expect(await screen.findByText("Página guardada", VISIBLE)).toBeInTheDocument();
+    expect(await screen.findByText("Página guardada")).toBeInTheDocument();
     const primera = document.querySelector(".libro-abierto .pagina");
     expect(within(primera).getByRole("heading", { level: 3 })).toHaveTextContent("Hoy");
     expect(primera).toHaveClass("fondo-lavanda");
+  });
+
+  it("una página con fecha pasada va en su lugar, no primero, y el libro se abre en ella", async () => {
+    guardarSesion({ url: API, token: "p" });
+    apiFalsa();
+    render(<App />);
+    await screen.findByText("Un domingo");
+
+    await userEvent.click(screen.getByRole("button", { name: /nueva página/i }));
+    fireEvent.change(screen.getByLabelText("Fecha"), { target: { value: "2026-09-10" } });
+    await userEvent.type(screen.getByLabelText("Título"), "Me acordé tarde");
+    await userEvent.click(screen.getByRole("button", { name: "Guardar" }));
+
+    // El 10 es antes que el 20: queda como la página 2, y el libro se abre ahí.
+    expect(await screen.findByText("Página guardada")).toBeInTheDocument();
+    expect(screen.getByText(/Página 2 de 2/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3 })).toHaveTextContent("Me acordé tarde");
+
+    await userEvent.click(screen.getByRole("button", { name: /volver a lo más reciente/i }));
+    expect(screen.getByRole("heading", { level: 3 })).toHaveTextContent("Un domingo");
   });
 
   it("borrar algo que ya no existe recarga la lista en vez de dejar un error", async () => {
@@ -220,10 +238,10 @@ describe("con sesión", () => {
 
     // Alguien lo borró desde otro dispositivo: la API ya no lo tiene.
     await fetch.getMockImplementation()(`${API}/catalogo/t1`, { method: "DELETE" });
-    const tarjeta = screen.getByText("Pagar la luz", VISIBLE).closest(".tarjeta");
+    const tarjeta = screen.getByText("Pagar la luz").closest(".tarjeta");
     await userEvent.click(within(tarjeta).getByRole("button", { name: /borrar/i }));
 
-    await waitFor(() => expect(screen.queryByText("Pagar la luz", VISIBLE)).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText("Pagar la luz")).not.toBeInTheDocument());
     expect(screen.queryByRole("status", { name: /error/i })).not.toBeInTheDocument();
   });
 });
@@ -233,7 +251,7 @@ describe("tema", () => {
     guardarSesion({ url: API, token: "p" });
     apiFalsa();
     render(<App />);
-    await screen.findByText("Un domingo", VISIBLE);
+    await screen.findByText("Un domingo");
     expect(document.documentElement.dataset.tema).toBeUndefined();
   });
 
@@ -244,6 +262,17 @@ describe("tema", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Ajustes" }));
     await userEvent.click(screen.getByRole("radio", { name: /oscuro/i }));
     expect(document.documentElement.dataset.tema).toBe("oscuro");
-    expect(localStorage.getItem("catalogo.tema")).toBe("oscuro");
+    expect(localStorage.getItem("catalogo.apariencia")).toBe("oscuro");
+  });
+
+  it("el tema que guardaba sola la primera versión ya no impide seguir al teléfono", async () => {
+    // La primera versión guardaba "claro" u "oscuro" en cada visita, lo eligiera uno o no.
+    localStorage.setItem("catalogo.tema", "oscuro");
+    guardarSesion({ url: API, token: "p" });
+    apiFalsa();
+    render(<App />);
+    await screen.findByText("Un domingo");
+    expect(document.documentElement.dataset.tema).toBeUndefined();
+    expect(localStorage.getItem("catalogo.tema")).toBeNull();
   });
 });

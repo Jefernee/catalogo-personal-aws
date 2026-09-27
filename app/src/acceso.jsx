@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { DUENO, ErrorApi, api, guardarSesion, hoyIso, leerToken, leerUrl } from "./api";
+import { useMedia } from "./diario";
 import { Hoja } from "./hoja";
 import { Candado, Compartir, Copiar, Descargar, Luna, Nube, Sol, WhatsApp } from "./iconos";
 
@@ -236,6 +237,7 @@ const TEMAS = [
 ];
 
 export function ModalAjustes({ alCerrar, alSalir, tema, alElegirTema, items, alRespaldarEnNube, avisar }) {
+  const telefonoOscuro = useMedia("(prefers-color-scheme: dark)");
   return (
     <Hoja titulo="Ajustes" alCerrar={alCerrar} clase="hoja--ajustes">
       <section className="ajuste">
@@ -254,6 +256,11 @@ export function ModalAjustes({ alCerrar, alSalir, tema, alElegirTema, items, alR
             </button>
           ))}
         </div>
+        <p className="nota-ajuste" aria-live="polite">
+          {tema === "sistema"
+            ? `Tu teléfono está en modo ${telefonoOscuro ? "oscuro" : "claro"}, y la app también.`
+            : `Siempre en ${tema}, aunque cambies el modo del teléfono.`}
+        </p>
       </section>
 
       <section className="ajuste">

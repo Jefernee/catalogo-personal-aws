@@ -4,7 +4,8 @@ Proyecto Final del **Módulo 3 (Cloud AWS)** del curso de Creai. Es individual y
 entrega con **demo en vivo + repositorio**, en las semanas 23 y 24.
 
 Dominio elegido: **catálogo personal**, que con el uso se volvió **"Mi diario"**: un diario
-que se ve como libro (páginas con fondo elegible, la más reciente primero) y una sección
+que se ve como libro (una hoja por día con fondo elegible, ordenadas por su fecha, la más
+reciente primero) y una sección
 **Listas** con tareas, compras, libros, películas, series, música, juegos y restaurantes.
 Todo vive en la misma tabla, distinguido por el campo `tipo`.
 
@@ -104,7 +105,7 @@ demo.sh                 guion de la demo en vivo
 pruebas_e2e.py          16 verificaciones contra la API desplegada
 tests/                  75 pruebas con pytest + moto
 servidor_local.py       la Lambda real contra AWS emulado, en localhost:8787
-app/                    aplicación React + Vite (PWA instalable), 81 pruebas con vitest
+app/                    aplicación React + Vite (PWA instalable), 84 pruebas con vitest
 frontend/index.html     la misma idea en un archivo, sin dependencias
 DESPLIEGUE.md           paso a paso en la consola de AWS
 PLAN-proyecto-final-modulo3.md   el plan contra la rúbrica
@@ -114,7 +115,7 @@ PLAN-proyecto-final-modulo3.md   el plan contra la rúbrica
 
 ```bash
 python -m pytest tests -q                 # 75 pruebas de la Lambda
-cd app && npm test                        # 81 pruebas de la app
+cd app && npm test                        # 84 pruebas de la app
 python servidor_local.py                  # API local sin AWS, clave "local"
 python pruebas_e2e.py <URL_API> <CLAVE>   # 19 verificaciones contra la API real
 python cargar_datos.py <URL_API> <CLAVE>  # carga los 10 registros de ejemplo
@@ -163,8 +164,15 @@ retención de logs distinta de "nunca vence".
   fallar la API.
 - **`scan` paginado** con `LastEvaluatedKey`: sin eso, con volumen alto el listado y el
   export salían incompletos en silencio.
-- **Las notas largas se parten en hojas** como en un libro: cada nota se maqueta en columnas
-  del tamaño de la hoja (`diario.jsx`, `useMedidas`) y cada hoja muestra una columna.
+- **Una hoja por día.** Una nota larga no se parte en varias hojas: la hoja crece y se lee
+  bajando, y abajo hay botones para pasar de hoja. (Antes se partía en columnas; en el celular
+  había que pasar muchas hojas para leer un solo día.)
+- **Las hojas van por su fecha**, no por cuándo se escribieron: una página del día 20 escrita
+  hoy queda entre las del 20. Al guardarla, el libro se abre en ella (`ordenarPaginas`, `Libro`).
+- **Cada fondo tiene versión de día y de noche** (`--pagina-fondo` y `--pagina-fondo-oscuro`
+  en `styles.css`). Con el teléfono en oscuro la hoja se vuelve de noche, no se queda blanca.
+- **El tema se guarda en `catalogo.apariencia`.** La primera versión guardaba `catalogo.tema`
+  sola en cada visita y eso impedía seguir al teléfono; la app borra esa llave al abrir.
 - **Estilo del código y de la interfaz en español**, igual que el resto del proyecto.
 
 ---
@@ -182,7 +190,7 @@ workflow de `.github/workflows/pages.yml` y actualiza GitHub Pages.
 | Quiero… | Dónde se toca |
 |---|---|
 | Agregar un tipo (por ejemplo `podcast`) | `TIPOS_VALIDOS` en `lambda_function.py`, y `TIPOS` + `ETIQUETAS` + `ICONOS` + `CAMPO_EXTRA` en `app/src/api.js`. Luego pegar la Lambda en la consola. |
-| Agregar un fondo de página | `FONDOS_VALIDOS` en la Lambda, `FONDOS` en `app/src/api.js` y una clase `.fondo-<id>` en `styles.css`. |
+| Agregar un fondo de página | `FONDOS_VALIDOS` en la Lambda, `FONDOS` en `app/src/api.js` y una clase `.fondo-<id>` en `styles.css` con su versión de día y de noche (`--pagina-fondo`, `--pagina-fondo-oscuro` y, si cambia la tinta, `--tinta-oscura`). |
 | Cambiar el nombre de la sección Listas | la constante `NOMBRE_LISTAS` en `app/src/App.jsx`. |
 | Cambiar el nombre del dueño | la constante `DUENO` en `app/src/api.js` (sale en la invitación y en el acceso). |
 | Cambiar el texto de la invitación | `mensajeInvitacion()` en `app/src/acceso.jsx`. |

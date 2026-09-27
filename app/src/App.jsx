@@ -31,6 +31,16 @@ const recordar = (llave, valor) => {
     /* sin persistencia en modo privado */
   }
 };
+const olvidar = (llave) => {
+  try {
+    localStorage.removeItem(llave);
+  } catch {
+    /* nada que olvidar */
+  }
+};
+
+/** Dónde se guarda el tema elegido en Ajustes. */
+export const LLAVE_TEMA = "catalogo.apariencia";
 
 export default function App() {
   const [conSesion, setConSesion] = useState(() => Boolean(leerUrl() && leerToken()));
@@ -41,15 +51,20 @@ export default function App() {
   const [brindis, setBrindis] = useState(null);
   const [modal, setModal] = useState(null); // { tipo: "item" | "pagina" | "ajustes", item? }
   const [filtros, setFiltros] = useState({ tipo: "", estado: "", busqueda: "" });
-  // "sistema" sigue al teléfono: si está en oscuro, la app también.
-  const [tema, setTema] = useState(() => recordado("catalogo.tema", "sistema"));
+  // "sistema" sigue al teléfono: si está en oscuro, la app también. La primera
+  // versión guardaba "claro" u "oscuro" sola en cada visita, en otra llave; ese
+  // valor no lo eligió nadie y dejaba la app sin seguir al teléfono: se descarta.
+  const [tema, setTema] = useState(() => {
+    olvidar("catalogo.tema");
+    return recordado(LLAVE_TEMA, "sistema");
+  });
 
   // El tema vive en el atributo data-tema del <html>; el CSS hace el resto.
   // Sin atributo, manda prefers-color-scheme: lo que tenga el sistema.
   useEffect(() => {
     if (tema === "sistema") delete document.documentElement.dataset.tema;
     else document.documentElement.dataset.tema = tema;
-    recordar("catalogo.tema", tema);
+    recordar(LLAVE_TEMA, tema);
   }, [tema]);
 
   useEffect(() => recordar("catalogo.pestana", pestana), [pestana]);
